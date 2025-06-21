@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard with AI Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Analytics Dashboard</h1>
+            <button id="close-app" class="close-app" title="Close Application">
+                <i class="fas fa-times"></i>
+            </button>
+        </header>
+        
+        <main>
+            <section class="analytics-console">
+                <div class="console-header">
+                    <h2>Analytics Console</h2>
+                    <div class="console-actions">
+                        <button id="refresh-btn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    </div>
+                </div>
+                <div class="console-content" id="analytics-content">
+                    <p>Analytics data will appear here...</p>
+                </div>
+            </section>
+        </main>
+        
+        <!-- Chat Toggle Button -->
+        <button id="chat-toggle" class="chat-toggle">
+            <i class="fas fa-comment-dots"></i>
+        </button>
+        
+        <!-- Chat Container -->
+        <div id="chat-container" class="chat-container">
+            <div class="chat-header">
+                <h3>AI Assistant</h3>
+                <div class="chat-actions">
+                    <button id="minimize-chat" title="Minimize"><i class="fas fa-minus"></i></button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="initial-greeting">
+                    Hi, what can I help you with today?
+                </div>
+                <!-- Messages will be added here dynamically -->
+            </div>
+            <div class="chat-input">
+                <textarea 
+                    id="user-input" 
+                    placeholder="Type your message..." 
+                    rows="1"
+                    aria-label="Type your message"
+                ></textarea>
+                <button id="send-btn" aria-label="Send message">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
