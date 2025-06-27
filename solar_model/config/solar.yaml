@@ -1,0 +1,205 @@
+simulation:
+  steps: 7  # Number of months to simulate
+  random_seed: 42
+
+environment:
+  current_month: 1  # Starting month (1-12)
+  grid_buy_price: 0.22  # $/kWh for buying from grid
+  grid_sell_ratio: 0.82  # Ratio of buy price for selling to grid
+  solar_installation_cost: 3.50  # $/W installed
+  solar_maintenance_cost: 0.01  # $/W/year
+  panel_degradation: 0.005  # Annual degradation rate
+  inflation_rate: 0.02  # Annual inflation rate
+  discount_rate: 0.05  # Discount rate for ROI calculations
+  
+agents:
+  household:
+    count: 100  # Will be overridden by actual data
+    properties:
+      id: int
+      location: array, 2, float  # [latitude, longitude]
+      community_id: int
+      demand_profile: array, 12, float  # Monthly demand in kWh
+      financial_capacity: float  # 0-1 scale
+      generation_capacity: float  # kW
+      battery_capacity: float  # kWh
+      battery_charge: float  # Current charge in kWh
+      grid_consumption: float  # kWh from grid
+      excess_energy: float  # Excess energy in kWh
+      has_solar: boolean
+      neighbor_adoption: array, 10, boolean  # Adoption status of neighbors
+      adoption_propensity: float  # 0-1 scale
+      expected_roi: float  # Expected return on investment
+      monthly_savings: float  # $ saved this month
+      cumulative_savings: float  # Total $ saved
+      
+  community:
+    count: 10  # Will be overridden by actual data
+    properties:
+      id: int
+      grid_station_id: int
+      household_ids: array, 100, int  # Up to 100 households per community
+      market_price: float  # Current market clearing price ($/kWh)
+      power_balance: float  # Net power balance (kWh)
+      total_generation: float  # Total solar generation (kWh)
+      total_consumption: float  # Total consumption (kWh)
+      
+  grid_station:
+    count: 3  # Will be overridden by actual data
+    properties:
+      id: int
+      max_capacity: float  # Max capacity in kW
+      current_load: float  # Current load in kW
+      dynamic_price: float  # Current price in $/kWh
+      reliability: float  # 0-1 scale
+      total_generation: float  # Total generation (kWh)
+      total_consumption: float  # Total consumption (kWh)
+      revenue: float  # Total revenue ($)
+
+substeps:
+  - name: 'solar_generation'
+    agent: 'household'
+    observation:
+      func: 'calculate_solar_generation'
+      observes:
+        - 'household/has_solar'
+        - 'household/generation_capacity'
+        - 'environment/current_month'
+      produces:
+        - 'hourly_generation'
+        - 'daily_generation'
+    
+    action:
+      func: 'update_energy_balance'
+      requires:
+        - 'household/demand_profile'
+        - 'household/battery_capacity'
+        - 'household/battery_charge'
+      decides:
+        - 'battery_charge'
+        - 'excess_energy'
+        - 'grid_consumption'
+    
+    transition:
+      func: 'update_household_state'
+      updates:
+        - 'household/battery_charge'
+        - 'household/excess_energy'
+        - 'household/grid_consumption'
+
+  - name: 'market_clearing'
+    agent: 'community'
+    observation:
+      func: 'aggregate_community_energy'
+      observes:
+        - 'household/excess_energy'
+        - 'household/grid_consumption'
+        - 'community/household_ids'
+      produces:
+        - 'total_supply'
+        - 'total_demand'
+    
+    action:
+      func: 'clear_market'
+      requires:
+        - 'environment/grid_buy_price'
+        - 'environment/grid_sell_ratio'
+      decides:
+        - 'market_price'
+        - 'power_balance'
+    
+    transition:
+      func: 'update_community_state'
+      updates:
+        - 'community/market_price'
+        - 'community/power_balance'
+        - 'community/total_generation'
+        - 'community/total_consumption'
+
+  - name: 'grid_interaction'
+    agent: 'grid_station'
+    observation:
+      func: 'monitor_grid_status'
+      observes:
+        - 'grid_station/current_load'
+        - 'grid_station/max_capacity'
+        - 'community/power_balance'
+      produces:
+        - 'available_capacity'
+        - 'grid_stability'
+    
+    action:
+      func: 'update_grid_pricing'
+      requires:
+        - 'environment/grid_buy_price'
+        - 'grid_station/reliability'
+      decides:
+        - 'dynamic_price'
+    
+    transition:
+      func: 'update_grid_state'
+      updates:
+        - 'grid_station/current_load'
+        - 'grid_station/dynamic_price'
+        - 'grid_station/total_generation'
+        - 'grid_station/total_consumption'
+        - 'grid_station/revenue'
+
+  - name: 'solar_adoption'
+    agent: 'household'
+    observation:
+      func: 'evaluate_solar_potential'
+      observes:
+        - 'household/financial_capacity'
+        - 'household/demand_profile'
+        - 'household/grid_consumption'
+        - 'household/neighbor_adoption'
+        - 'environment/solar_installation_cost'
+        - 'environment/solar_maintenance_cost'
+      produces:
+        - 'adoption_metrics'
+    
+    action:
+      func: 'make_adoption_decision'
+      requires:
+        - 'household/adoption_propensity'
+        - 'household/expected_roi'
+        - 'household/has_solar'
+      decides:
+        - 'adoption_decision'
+    
+    transition:
+      func: 'update_adoption_state'
+      updates:
+        - 'household/has_solar'
+        - 'household/generation_capacity'
+        - 'household/adoption_propensity'
+        - 'household/expected_roi'
+
+  - name: 'financial_update'
+    agent: 'household'
+    observation:
+      func: 'calculate_financials'
+      observes:
+        - 'household/grid_consumption'
+        - 'household/excess_energy'
+        - 'community/market_price'
+        - 'environment/grid_buy_price'
+        - 'environment/grid_sell_ratio'
+      produces:
+        - 'monthly_cost'
+        - 'monthly_savings'
+    
+    action:
+      func: 'update_financials'
+      requires:
+        - 'household/cumulative_savings'
+      decides:
+        - 'cumulative_savings'
+    
+    transition:
+      func: 'update_roi'
+      updates:
+        - 'household/monthly_savings'
+        - 'household/cumulative_savings'
+        - 'household/expected_roi'
