@@ -4,7 +4,7 @@
 
 A stateful Python API for interacting with OpenDSS simulations of the IEEE 123-bus test feeder. This project enables dynamic modification of grid states, including load adjustments and power generation, with real-time simulation results.
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 .
@@ -14,7 +14,7 @@ A stateful Python API for interacting with OpenDSS simulations of the IEEE 123-b
 └── README.md              # This file
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -43,7 +43,7 @@ A stateful Python API for interacting with OpenDSS simulations of the IEEE 123-b
            └── ... (other required .dss files)
    ```
 
-## 🚀 Usage
+## Usage
 
 ### Starting the API Server
 
@@ -53,7 +53,7 @@ python api.py
 
 The API server will start on `http://127.0.0.1:5000`
 
-## 📚 API Endpoints
+## API Endpoints
 
 ### `POST /modify_load_neighbourhood`
 Modifies the load in a specific neighborhood by a given factor.
@@ -92,12 +92,13 @@ curl -X POST http://127.0.0.1:5000/add_generator \
      -d '{"bus_name": "150", "phases": 3, "kw": 1000}'
 ```
 
-## 📁 Results
+## Results
 
 Simulation results are saved in the `results_api` directory, including:
 - `latest_api_results.txt`: Most recent simulation results
 - Timestamped files for historical data
 
-## 🤝 Contributing
+## Contributions
+Iris Eldo and Tarun PK 
 
 Contributions are welcome! Please feel free to submit a Pull Request.
