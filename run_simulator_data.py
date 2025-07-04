@@ -37,8 +37,24 @@ def get_current_state_details(circuit_object: OpenDSSCircuit, management_status:
         "bus_details": buses_df.to_dict(orient='records')
     }
 
+def save_management_log_to_file(management_log: list, filename: str):
+    """Saves the detailed step-by-step management log to its own text file."""
+    filepath = os.path.join(RESULTS_DIR, filename)
+    output = [f"{'='*120}\nDETAILED MANAGEMENT LOG\n{'='*120}\n"]
+    
+    if management_log:
+        for log_entry in management_log:
+            # The log entries are already formatted, so just append them
+            output.append(log_entry)
+    else:
+        output.append("- No management actions were logged.")
+        
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write("\n".join(output))
+    print(f"Detailed log saved to file: {filepath}")
+
 def save_state_to_file(state_details: dict, filename: str):
-    """Formats and saves the current state, including detailed transformer statuses, to a text file."""
+    """Formats and saves the current state summary to a text file."""
     filepath = os.path.join(RESULTS_DIR, filename)
     management = state_details.get('management_status', {})
     summary = state_details.get('power_summary', {})
@@ -49,9 +65,10 @@ def save_state_to_file(state_details: dict, filename: str):
     
     output.append("--- SYSTEM STATUS & MANAGEMENT LOG ---")
     output.append(f"Overall Status: {management.get('status', 'N/A')}")
-    if management.get('management_log'):
-        for log_entry in management['management_log']:
-            output.append(f"- {log_entry}")
+    management_log = management.get('management_log')
+    if management_log:
+        # Only show the final summary line in the main report
+        output.append(management_log[-1])
     output.append("\n")
 
     output.append("--- POWER SUMMARY ---")
@@ -73,28 +90,32 @@ def save_state_to_file(state_details: dict, filename: str):
         bus_name = bus_info.get('Bus', '')
         if bus_name not in processed_buses:
             bus_nodes = [b for b in bus_list if b['Bus'] == bus_name]
-            total_load = bus_nodes[0].get('Load_kW', 0) * len(bus_nodes)
-            total_gen = bus_nodes[0].get('Gen_kW', 0) * len(bus_nodes)
-            total_net = bus_nodes[0].get('Net_Power_kW', 0) * len(bus_nodes)
+            total_load = bus_nodes[0].get('Load_kW', 0)
+            total_gen = bus_nodes[0].get('Gen_kW', 0)
+            total_net = bus_nodes[0].get('Net_Power_kW', 0)
             
             output.append(f"{bus_name:<10}{'--':<5}{bus_nodes[0].get('VMag_pu', 0):<15.4f}{bus_nodes[0].get('VAngle', 0):<15.2f}{total_load:<15.2f}{total_gen:<15.2f}{total_net:<15.2f}")
             processed_buses.add(bus_name)
 
-            # Display attached transformers with their detailed status
             if bus_nodes[0].get('Transformers'):
                 for xfmr in bus_nodes[0]['Transformers']:
-                    if xfmr: # Check if transformer object is valid
+                    if xfmr:
                         status_line = f"Status: {xfmr.get('status')} ({xfmr.get('loading_percent')}%)"
                         rating_line = f"Rating: {xfmr.get('rated_kVA')} kVA"
                         output.append(f"  -> {'Transformer:':<15} {xfmr.get('name'):<25} {status_line:<25} {rating_line}")
 
-            # Display attached devices
             if bus_nodes[0].get('Devices'):
                 for device in bus_nodes[0]['Devices']:
                     output.append(f"  -> {'Device:':<15} {device.get('device_name', ''):<25} {device.get('kw', 0):>10.2f} kW")
 
     with open(filepath, 'w', encoding='utf-8') as f: f.write("\n".join(output))
-    print(f"Results updated in file: {filepath}")
+    print(f"Results summary updated in file: {filepath}")
+
+# Save the initial state files after the first run
+if 'management_log' in management_status:
+    save_management_log_to_file(management_status['management_log'], "management_log.txt")
+initial_details = get_current_state_details(circuit, management_status)
+save_state_to_file(initial_details, "latest_api_results.txt")
 
 
 # --- API Endpoints ---
@@ -109,6 +130,8 @@ def modify_load_neighbourhood_endpoint():
     circuit.modify_loads_in_neighborhood(neighbourhood, factor)
     management_status = circuit.solve_and_manage_loading()
     
+    if 'management_log' in management_status:
+        save_management_log_to_file(management_status['management_log'], "management_log.txt")
     current_details = get_current_state_details(circuit, management_status)
     save_state_to_file(current_details, "latest_api_results.txt")
     return jsonify({"status": "success", "results": current_details}), 200
@@ -126,6 +149,8 @@ def modify_load_household_endpoint():
          return jsonify(result), 404 if "not found" in result.get("message", "") else 200
 
     management_status = circuit.solve_and_manage_loading()
+    if 'management_log' in management_status:
+        save_management_log_to_file(management_status['management_log'], "management_log.txt")
     current_details = get_current_state_details(circuit, management_status)
     save_state_to_file(current_details, "latest_api_results.txt")
     return jsonify({"status": "success", "results": current_details}), 200
@@ -140,6 +165,8 @@ def add_generator_endpoint():
     
     circuit.add_generation_to_bus(bus_name, kw, phases)
     management_status = circuit.solve_and_manage_loading()
+    if 'management_log' in management_status:
+        save_management_log_to_file(management_status['management_log'], "management_log.txt")
     current_details = get_current_state_details(circuit, management_status)
     save_state_to_file(current_details, "latest_api_results.txt")
     return jsonify({"status": "success", "results": current_details}), 200
@@ -154,6 +181,8 @@ def add_device_endpoint():
     
     circuit.add_device_to_bus(bus_name, device_name, kw, phases)
     management_status = circuit.solve_and_manage_loading()
+    if 'management_log' in management_status:
+        save_management_log_to_file(management_status['management_log'], "management_log.txt")
     current_details = get_current_state_details(circuit, management_status)
     save_state_to_file(current_details, "latest_api_results.txt")
     return jsonify({"status": "success", "results": current_details}), 200
@@ -170,20 +199,11 @@ def disconnect_device_endpoint():
         return jsonify({"status": "not_found", "message": f"Device not found."}), 404
 
     management_status = circuit.solve_and_manage_loading()
+    if 'management_log' in management_status:
+        save_management_log_to_file(management_status['management_log'], "management_log.txt")
     current_details = get_current_state_details(circuit, management_status)
     save_state_to_file(current_details, "latest_api_results.txt")
     return jsonify({"status": "success", "results": current_details}), 200
-
-@app.route('/reset_simulation', methods=['POST'])
-def reset_simulation_endpoint():
-    global circuit
-    print("--- Resetting Simulation ---")
-    circuit = OpenDSSCircuit("")
-    management_status = circuit.solve_and_manage_loading()
-    current_details = get_current_state_details(circuit, management_status)
-    save_state_to_file(current_details, "latest_api_results.txt")
-    return jsonify({"status": "success", "message": "Circuit reset and stabilized.", "results": current_details})
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
