@@ -553,7 +553,11 @@ class OpenDSSCircuit:
         dfp_index = target_dfp['index']
         num_dfps = len(self.dfps)
 
-        dfp_list = self.bus_dfps.setdefault(bus_name_lower, [0] * num_dfps)
+        # FIX: Ensure the bus subscription list is correctly sized before modification.
+        dfp_list = self.bus_dfps.setdefault(bus_name_lower, [])
+        if len(dfp_list) < num_dfps:
+            dfp_list.extend([0] * (num_dfps - len(dfp_list)))
+
         dfp_list[dfp_index - 1] = 1
         return {"status": "success"}
 
@@ -572,7 +576,11 @@ class OpenDSSCircuit:
         dfp_index = target_dfp['index']
         num_dfps = len(self.dfps)
 
-        dfp_list = self.bus_dfps.setdefault(bus_name_lower, [0] * num_dfps)
+        # FIX: Ensure the bus subscription list is correctly sized before modification.
+        dfp_list = self.bus_dfps.setdefault(bus_name_lower, [])
+        if len(dfp_list) < num_dfps:
+            dfp_list.extend([0] * (num_dfps - len(dfp_list)))
+
         if len(dfp_list) >= dfp_index:
             dfp_list[dfp_index - 1] = 0
         
