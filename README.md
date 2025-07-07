@@ -313,7 +313,34 @@ A Python-based simulation tool for analyzing and managing power distribution sys
   Invoke-RestMethod -Uri "http://localhost:5000/unsubscribe_dfp" -Method Post -Body $body -ContentType "application/json"
   ```
 
-### 13. Execute DFP Rules
+### 13. Modify High-Wattage Devices in Bus
+- **Endpoint**: `POST /modify_devices_in_bus`
+- **Description**: Reduces load for high-wattage devices on a specific bus
+- **Request Body**:
+  ```json
+  {
+    "bus_name": "1",
+    "power_threshold_kw": 5.0,
+    "reduction_factor": 0.7
+  }
+  ```
+- **Example (PowerShell)**:
+  ```powershell
+  $body = @{
+      bus_name = "1"
+      power_threshold_kw = 5.0
+      reduction_factor = 0.7
+  } | ConvertTo-Json
+  Invoke-RestMethod -Uri "http://localhost:5000/modify_devices_in_bus" -Method Post -Body $body -ContentType "application/json"
+  ```
+- **Example (Linux)**:
+  ```bash
+  curl -X POST -H "Content-Type: application/json" \
+       -d '{"bus_name": "1", "power_threshold_kw": 5.0, "reduction_factor": 0.7}' \
+       http://localhost:5000/modify_devices_in_bus
+  ```
+
+### 14. Execute DFP Rules
 - **Endpoint**: `POST /execute_dfp`
 - **Description**: Executes DFP rules on all subscribed buses
 - **Request Body**:
@@ -332,8 +359,8 @@ A Python-based simulation tool for analyzing and managing power distribution sys
 - **Example (Linux)**:
   ```bash
   curl -X POST -H "Content-Type: application/json" \
-       -d '{"neighbourhood": 1, "factor": 0.8}' \
-       http://localhost:5000/modify_load_neighbourhood
+       -d '{"dfp_name": "peak_shaving"}' \
+       http://localhost:5000/execute_dfp
   ```
 
 ### 2. Modify Load for a Specific Household
