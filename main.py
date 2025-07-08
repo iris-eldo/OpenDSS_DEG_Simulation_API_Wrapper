@@ -1,6 +1,7 @@
 import opendssdirect as dss
 import pandas as pd
 import time
+import random
 
 from IEEE_123_Bus_G_neighbourhoods import *
 
@@ -423,6 +424,12 @@ class OpenDSSCircuit:
             nodes_on_bus = dss.Bus.Nodes()
             pu_voltages = dss.Bus.puVmagAngle()
 
+            # --- MODIFICATION START ---
+            # Get coordinates and other metadata
+            x_coord = dss.Bus.X()
+            y_coord = dss.Bus.Y()
+            # --- MODIFICATION END ---
+
             caps = self.bus_capacities.get(bus_name, {'load_kw': 0, 'gen_kw': 0})
             total_load_kw = caps['load_kw']
             total_gen_kw = caps['gen_kw']
@@ -438,6 +445,9 @@ class OpenDSSCircuit:
             if nodes_on_bus:
                 bus_data.append({
                     'Bus': bus_name,
+                    # --- MODIFICATION START ---
+                    'Coordinates': {'X': x_coord, 'Y': y_coord},
+                    # --- MODIFICATION END ---
                     'DFPs': dfps_list,
                     'VMag_pu': pu_voltages[0], 'VAngle': pu_voltages[1],
                     'Load_kW': total_load_kw, 'Gen_kW': total_gen_kw, 'Net_Power_kW': net_power_kw
@@ -641,8 +651,6 @@ class OpenDSSCircuit:
         print("All bus subscriptions have been re-mapped.")
         return {"status": "success"}
 
-    # --- NEW FUNCTIONS START HERE ---
-
     def modify_high_wattage_devices_in_bus(self, bus_name: str, power_threshold_kw: float, reduction_factor: float) -> dict:
         """
         Reduces the load for all devices in a specific bus that are above a given power threshold.
@@ -689,7 +697,8 @@ class OpenDSSCircuit:
 
     def execute_dfp(self, dfp_name: str) -> dict:
         """
-        Finds all buses subscribed to a DFP and executes its load reduction requirements.
+        Finds all buses subscribed to a DFP, executes its rules,
+        and returns the participation status for each bus.
         """
         # Find the DFP by name
         target_dfp = next((dfp for dfp in self.dfps if dfp['name'].lower() == dfp_name.lower()), None)
@@ -697,7 +706,6 @@ class OpenDSSCircuit:
             return {"status": "error", "message": f"DFP with name '{dfp_name}' not found."}
         
         dfp_index = target_dfp['index']
-        # Interpret DFP parameters as per the new requirement
         power_threshold_kw = target_dfp['min_power_kw']
         reduction_factor = target_dfp['target_pf'] # Using target_pf as the reduction factor
 
@@ -710,20 +718,49 @@ class OpenDSSCircuit:
         if not subscribed_buses:
             return {"status": "info", "message": f"No buses are subscribed to DFP '{dfp_name}'."}
 
-        # Execute the load modification for each subscribed bus
-        execution_log = []
+        # Execute the load modification and track participation
+        log_summary = []
+        participation_data = []
+        
         for bus_name in subscribed_buses:
-            result = self.modify_high_wattage_devices_in_bus(bus_name, power_threshold_kw, reduction_factor)
-            execution_log.append(f"Bus '{bus_name}': {result['message']}")
+            did_participate = random.choice([True, False])
+            participation_data.append({'bus_name': bus_name, 'participated': did_participate})
             
+            if did_participate:
+                result = self.modify_high_wattage_devices_in_bus(bus_name, power_threshold_kw, reduction_factor)
+                log_summary.append(f"Bus '{bus_name}': {result['message']}")
+            else:
+                log_summary.append(f"Bus '{bus_name}': Chose not to participate")
+
         return {
             "status": "success",
             "message": f"Executed DFP '{dfp_name}' on {len(subscribed_buses)} bus(es).",
-            "details": execution_log
+            "details": log_summary,
+            "participation_data": participation_data
         }
     
-    # --- END NEW FUNCTIONS ---
-
     def get_power_flow_results(self) -> dict:
+        """Returns key power flow results from the circuit."""
         total_p, _ = dss.Circuit.TotalPower()
         return {'converged': dss.Solution.Converged(), 'total_power_kW': total_p, 'total_losses_kW': dss.Circuit.Losses()[0]/1000}
+
+    def get_system_capacity_info(self) -> dict:
+        """
+        Calculates the total original load and total transformer capacity of the system.
+        """
+        # Calculate maximum load based on original load definitions
+        max_load_kw = sum(self.original_load_kws.values())
+
+        # Calculate maximum power capacity based on the sum of all transformer kVA ratings
+        max_power_kva = 0
+        if dss.Transformers.Count() > 0:
+            dss.Transformers.First()
+            while True:
+                max_power_kva += dss.Transformers.kVA()
+                if not dss.Transformers.Next() > 0:
+                    break
+        
+        return {
+            "maximum_circuit_load_kW": max_load_kw,
+            "maximum_circuit_power_kVA": max_power_kva
+        }
