@@ -1,0 +1,2 @@
+New "RegControl.creg1a" transformer=reg1a winding=2 tapwinding=2 vreg=122 band=2 ptratio=40 CTprim=350 R=-0.201 X=3.348
+New "RegControl.creg1c" transformer=reg1c winding=2 vreg=122 band=2 ptratio=40 CTprim=350 delay=15 reversible=no revvreg=120 revband=3 revR=0 revX=0 tapdelay=2 debugtrace=no maxtapchange=16 inversetime=no tapwinding=2 vlimit=0.0 PTphase=1 revThreshold=100 revDelay=60 revNeutral=No EventLog=YES RemotePTRatio=60 TapNum=14 Reset=NO LDC_Z=0 rev_Z=0 Cogen=No basefreq=60 enabled=true R=2.799 X=1.848

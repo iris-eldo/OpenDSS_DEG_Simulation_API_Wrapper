@@ -1,0 +1,1 @@
+New "Transformer.subxf" phases=3 windings=2 Xhl=0.001 ppm_antifloat=0 buses=[sourcebus, 800, ] conns=[delta, wye, ] kVs=[69, 24.9, ] kVAs=[25000, 25000, ] taps=[1, 1, ] buses=[sourcebus, 800, ] conns=[delta, wye, ] kVs=[69, 24.9, ] kVAs=[25000, 25000, ] taps=[1, 1, ] wdg=1 %R=0.0005 wdg=2 %R=0.0005

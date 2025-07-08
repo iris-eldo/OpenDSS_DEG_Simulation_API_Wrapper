@@ -1,0 +1,20 @@
+Clear
+New Circuit.ieee8500
+
+
+Redirect Vsource.dss
+Redirect LineCode.dss
+Redirect XfmrCode.dss
+Redirect LoadShape.dss
+Redirect GrowthShape.dss
+Redirect TCC_Curve.dss
+Redirect Spectrum.dss
+Redirect sub\Branches.dss
+Redirect sub\Transformers.dss
+Redirect sub\Loads.dss
+Redirect sub\Capacitors.dss
+Redirect EnergyMeter.dss
+MakeBusList
+Redirect BusVoltageBases.dss  ! set voltage bases
+Buscoords BusCoords.dss
+GIScoords GISCoords.dss

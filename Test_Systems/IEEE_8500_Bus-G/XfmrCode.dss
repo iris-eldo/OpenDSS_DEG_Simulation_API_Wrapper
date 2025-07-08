@@ -1,0 +1,9 @@
+New "XfmrCode.ct5" phases=1 windings=3 kVs=[7.2, 0.12, 0.12, ] kVAs=[5, 5, 5, ] %imag=0.5 %Rs=[0.6, 1.2, 1.2, ] %noloadloss=0.2 Xhl=2.04 Xht=2.04 Xlt=1.36
+New "XfmrCode.ct10" phases=1 windings=3 kVs=[7.2, 0.12, 0.12, ] kVAs=[10, 10, 10, ] %imag=0.5 %Rs=[0.6, 1.2, 1.2, ] %noloadloss=0.2 Xhl=2.04 Xht=2.04 Xlt=1.36
+New "XfmrCode.ct15" phases=1 windings=3 kVs=[7.2, 0.12, 0.12, ] kVAs=[15, 15, 15, ] %imag=0.5 %Rs=[0.6, 1.2, 1.2, ] %noloadloss=0.2 Xhl=2.04 Xht=2.04 Xlt=1.36
+New "XfmrCode.ct25" phases=1 windings=3 kVs=[7.2, 0.12, 0.12, ] kVAs=[25, 25, 25, ] %imag=0.5 %Rs=[0.6, 1.2, 1.2, ] %noloadloss=0.2 Xhl=2.04 Xht=2.04 Xlt=1.36
+New "XfmrCode.ct37" phases=1 windings=3 kVs=[7.2, 0.12, 0.12, ] kVAs=[37.5, 37.5, 37.5, ] %imag=0.5 %Rs=[0.6, 1.2, 1.2, ] %noloadloss=0.2 Xhl=2.04 Xht=2.04 Xlt=1.36
+New "XfmrCode.ct50" phases=1 windings=3 kVs=[7.2, 0.12, 0.12, ] kVAs=[50, 50, 50, ] %imag=0.5 %Rs=[0.6, 1.2, 1.2, ] %noloadloss=0.2 Xhl=2.04 Xht=2.04 Xlt=1.36
+New "XfmrCode.ct75" phases=1 windings=3 kVs=[7.2, 0.12, 0.12, ] kVAs=[75, 75, 75, ] %imag=0.5 %Rs=[0.6, 1.2, 1.2, ] %noloadloss=0.2 Xhl=2.04 Xht=2.04 Xlt=1.36
+New "XfmrCode.ct100" phases=1 windings=3 kVs=[7.2, 0.12, 0.12, ] kVAs=[100, 100, 100, ] %imag=0.5 %Rs=[0.6, 1.2, 1.2, ] %noloadloss=0.2 Xhl=2.04 Xht=2.04 Xlt=1.36
+New "XfmrCode.ct250" phases=1 windings=3 kVs=[7.2, 0.12, 0.12, ] kVAs=[250, 250, 250, ] %imag=0.5 %Rs=[0.6, 1.2, 1.2, ] %noloadloss=0.2 Xhl=2.04 Xht=2.04 Xlt=1.36

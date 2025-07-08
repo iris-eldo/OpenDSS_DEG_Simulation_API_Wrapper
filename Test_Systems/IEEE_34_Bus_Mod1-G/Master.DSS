@@ -1,0 +1,19 @@
+Clear
+New Circuit.ieee34-1
+
+
+Redirect Vsource.dss
+Redirect LineCode.DSS
+Redirect LoadShape.DSS
+Redirect GrowthShape.DSS
+Redirect TCC_Curve.DSS
+Redirect Spectrum.DSS
+Redirect m1\Branches.dss
+Redirect m1\Transformers.dss
+Redirect m1\Loads.dss
+Redirect m1\Capacitors.dss
+Redirect Transformer.DSS
+Redirect EnergyMeter.DSS
+MakeBusList
+Redirect BusVoltageBases.dss  ! set voltage bases
+Buscoords buscoords.dss
