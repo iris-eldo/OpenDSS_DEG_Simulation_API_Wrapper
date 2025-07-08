@@ -2,6 +2,13 @@
 
 A Python-based simulation tool for analyzing and managing power distribution systems using OpenDSS. This tool provides a RESTful API interface for running power flow analyses, managing transformer loading, and implementing Demand Flexibility Programs (DFP) in distribution networks.
 
+## New Features
+
+- **Postman Collection**: A comprehensive Postman collection (`DEG_APIs.postman_collection`) is now available for easy API testing and integration.
+- **Critical System Monitoring**: Added `critical.txt` in the `results_api` directory to track critical system events and alerts.
+- **Enhanced Logging**: Improved logging system for better tracking of system operations and DFP activities.
+- **API Documentation**: Complete API reference with request/response examples for all endpoints.
+
 ## Features
 
 - **Power System Analysis**
@@ -80,6 +87,20 @@ A Python-based simulation tool for analyzing and managing power distribution sys
    ```
 
 2. The server will start on `http://localhost:5000` by default.
+
+## API Testing with Postman
+
+We provide a Postman collection (`DEG_APIs.postman_collection`) to help you test and integrate with the API. Here's how to use it:
+
+1. **Import the Collection**:
+   - Open Postman
+   - Click "Import" and select the `DEG_APIs.postman_collection` file
+   - The collection will appear in your Postman workspace
+
+2. **Using the Collection**:
+   - The collection is organized by functionality (Power Flow, DFP, Load Management, etc.)
+   - Each endpoint includes example requests with pre-filled values
+   - Environment variables are used for common values like `base_url`
 
 ## API Documentation
 
@@ -282,14 +303,14 @@ A Python-based simulation tool for analyzing and managing power distribution sys
   ```json
   {
     "bus_name": "1",
-    "dfp_number": 1
+    "dfp_name": "peak_shaving"
   }
   ```
 - **Example (PowerShell)**:
   ```powershell
   $body = @{
       bus_name = "1"
-      dfp_number = 1
+      dfp_name = "peak_shaving"
   } | ConvertTo-Json
   Invoke-RestMethod -Uri "http://localhost:5000/subscribe_dfp" -Method Post -Body $body -ContentType "application/json"
   ```
@@ -301,14 +322,14 @@ A Python-based simulation tool for analyzing and managing power distribution sys
   ```json
   {
     "bus_name": "1",
-    "dfp_number": 1
+    "dfp_name": "peak_shaving"
   }
   ```
 - **Example (PowerShell)**:
   ```powershell
   $body = @{
       bus_name = "1"
-      dfp_number = 1
+      dfp_name = "peak_shaving"
   } | ConvertTo-Json
   Invoke-RestMethod -Uri "http://localhost:5000/unsubscribe_dfp" -Method Post -Body $body -ContentType "application/json"
   ```
@@ -684,23 +705,29 @@ opendss_testing/
 │   ├── Request validation    # Input validation for API calls
 │   └── Response formatting   # Standardized API responses
 │
-├── IEEE_123_Bus_G_neighbourhoods.py  # Configuration for IEEE 123-Bus test feeder
-│   ├── Bus configurations    # Network topology and parameters
-│   └── Neighborhood setup    # Predefined load zones and groups
+├── Test_Systems/              # Contains test feeder models
+│   └── IEEE_123_Bus-G/        # IEEE 123-Bus test feeder (sample model)
+│       ├── Master.DSS         # Master OpenDSS file
+│       ├── BusCoords.dss      # Bus coordinates
+│       ├── BusVoltageBases.DSS # Voltage base definitions
+│       ├── EnergyMeter.DSS    # Energy meter configurations
+│       ├── Line.DSS           # Line definitions
+│       ├── LineCode.DSS       # Line code definitions
+│       ├── LoadShape.DSS      # Load shape definitions
+│       ├── RegControl.DSS     # Regulator control settings
+│       ├── Spectrum.DSS       # Harmonic spectrum data
+│       ├── TCC_Curve.DSS      # Time-current characteristic curves
+│       ├── Transformer.DSS    # Transformer definitions
+│       ├── Vsource.dss        # Voltage source definitions
+│       └── feeder/            # Additional feeder components
+│           ├── Branches.dss   # Branch definitions
+│           ├── Capacitors.dss # Capacitor banks
+│           ├── Loads.dss      # Load definitions
+│           └── Transformers.dss # Transformer configurations
 │
-├── requirements.txt           # Python dependencies and versions
-├── README.md                  # This documentation file
-│
-├── Test_Systems/              # OpenDSS model files (IEEE 123-Bus test feeder)
-│   └── IEEE_123_Bus-G/        # Contains Master.dss and related model files
-│       ├── Master.dss         # Main OpenDSS circuit definition
-│       ├── BusCoords.dat      # Bus coordinates for visualization
-│       ├── IEEE123XY.m        # MATLAB format bus coordinates
-│       └── ...               # Other model component files
-│
-└── results_api/               # Directory for storing simulation results and logs
+└── results_api/               # Directory for simulation results and logs
     ├── latest_api_results.txt  # Latest simulation results in text format
     ├── management_log.txt      # Log of all management actions and decisions
     ├── dfp_registry.txt       # Current DFP configurations and parameters
-    └── dfps_logs.txt          # Historical log of all DFP-related activities
-```
+    ├── dfps_logs.txt          # Historical log of all DFP-related activities
+    └── critical.txt           # Tracks critical system events and alerts
