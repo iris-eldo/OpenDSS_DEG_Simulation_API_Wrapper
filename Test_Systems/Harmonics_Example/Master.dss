@@ -1,0 +1,20 @@
+Clear
+New Circuit.ieee_519
+
+
+Redirect Vsource.dss
+Redirect LoadShape.dss
+Redirect GrowthShape.dss
+Redirect TCC_Curve.dss
+Redirect Spectrum.dss
+Redirect Line.dss
+Redirect Load.dss
+Redirect Transformer.dss
+Redirect Capacitor.dss
+Redirect Storage.dss
+Redirect SwtControl.dss
+Redirect Monitor.dss
+MakeBusList
+Redirect BusVoltageBases.dss  ! set voltage bases
+Buscoords BusCoords.dss
+GIScoords GISCoords.dss

@@ -1,0 +1,2 @@
+New "Load.load120a" phases=1 model=1 bus1=load_bus.1.0 kV=0.12 kW=14.98 kvar=10.08 daily=Load1
+New "Load.load120b" phases=1 model=1 bus1=load_bus.2.0 kV=0.12 kW=12.38 kvar=1.71 daily=Load2

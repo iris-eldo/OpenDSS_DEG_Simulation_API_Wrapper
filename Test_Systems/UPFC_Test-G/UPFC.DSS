@@ -1,0 +1,1 @@
+New "UPFC.upfc_0" Xs=0.02 refkv=0.242 Mode=1 LossCurve=losses bus1=upfc_input.1 bus2=upfc_output.1 phases=1 frequency=60 Tol1=0.0001 basefreq=60 enabled=true

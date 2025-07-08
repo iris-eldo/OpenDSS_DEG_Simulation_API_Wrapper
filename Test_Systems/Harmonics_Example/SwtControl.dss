@@ -1,0 +1,2 @@
+New "SwtControl.sw_3_ctrl" basefreq=60 Delay=0 Action=close SwitchedObj=line.sw_3 SwitchedTerm=2 Lock=No enabled=true
+New "SwtControl.sw_2_ctrl" basefreq=60 Delay=0 Action=close SwitchedObj=line.sw_2 SwitchedTerm=2 Lock=No enabled=true

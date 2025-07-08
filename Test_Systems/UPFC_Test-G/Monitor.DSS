@@ -1,0 +1,2 @@
+New "Monitor.viout" element=transformer.tupfcout terminal=1 mode=0 VIPolar=y
+New "Monitor.vin" element=upfc.upfc_0 mode=0 terminal=1 PPolar=yes residual=no VIPolar=yes

@@ -1,0 +1,4 @@
+New "XfmrCode.quasiideal" phases=1 windings=2 Xhl=0.01 %loadloss=0.01 kVAs=[100, 100, ] kVs=[0.24, 0.24, ] conns=[delta, delta, ] ppm_antifloat=0
+New "XfmrCode.1-ph50kva" phases=1 windings=3 ppm_antifloat=0 Xhl=2.04 Xht=2.04 Xlt=1.36 %noloadloss=0.02 kVs=[7.2, 0.12, 0.12, ] kVAs=[50, 50, 50, ] %Rs=[0.6, 1.2, 1.2, ] conns=[wye, wye, wye, ]
+New "XfmrCode.1-ph50kva-2" phases=1 windings=2 ppm_antifloat=0 Xhl=2.04 %noloadloss=0.02 kVs=[7.2, 0.24, ] kVAs=[50, 50, ] %Rs=[0.9, 0.9, ] conns=[wye, wye, ]
+New "XfmrCode.upfcinterface" phases=1 windings=3 ppm_antifloat=0 Xhl=.0204 Xht=.0204 Xlt=.0136 %noloadloss=0.01 kVs=[0.24, 0.12, 0.12, ] kVAs=[50, 50, 50, ] %Rs=[0.006, 0.012, 0.012, ] conns=[wye, wye, wye, ]
