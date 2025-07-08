@@ -1,0 +1,2 @@
+New "Line.326" bus1=ckt7 bus2=318405 length=0.0001 units=none r1=0 r0=0 x1=0.0001 x0=0.0001 normamps=600 emergamps=600
+New "Line.335" bus1=ckt7 bus2=318414 length=0.0001 units=none r1=0 r0=0 x1=0.0001 x0=0.0001 normamps=600 emergamps=600

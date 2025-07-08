@@ -1,0 +1,23 @@
+Clear
+New Circuit.ckt7
+
+
+Redirect LoadShape.DSS
+Redirect Vsource.dss
+Redirect LineCode.dss
+Redirect LoadShape.dss
+Redirect GrowthShape.dss
+Redirect TCC_Curve.dss
+Redirect Spectrum.dss
+Redirect 25607\Branches.dss
+Redirect 25607\Transformers.dss
+Redirect 25607\Loads.dss
+Redirect 25607\Capacitors.dss
+Redirect Line.dss
+Redirect Load.dss
+Redirect Transformer.dss
+Redirect EnergyMeter.dss
+MakeBusList
+Redirect BusVoltageBases.dss  ! set voltage bases
+Buscoords BusCoords.dss
+GIScoords GISCoords.dss
