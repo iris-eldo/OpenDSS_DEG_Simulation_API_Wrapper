@@ -52,7 +52,8 @@ A Python-based simulation tool for analyzing and managing power distribution sys
 1. Clone this repository:
    ```bash
    git clone <repository-url>
-   cd opendss_testing
+   cd FIDE-Project-5---The-Beckn-World-Engine
+   git checkout OpenDSS
    ```
 
 2. Create and activate a virtual environment (recommended):
