@@ -1,0 +1,302 @@
+{
+	"info": {
+		"_postman_id": "6842bce7-2e61-4229-aa01-8655538adb63",
+		"name": "DEG APIs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "45556405",
+		"_collection_link": "https://tarunpk-2302213.postman.co/workspace/Tarun-PK's-Workspace~8797e89f-51cd-4f8a-8a9e-1195af692de2/collection/45556405-6842bce7-2e61-4229-aa01-8655538adb63?action=share&source=collection_link&creator=45556405"
+	},
+	"item": [
+		{
+			"name": "get grid details",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": "http://localhost:5000/get_node_data"
+			},
+			"response": []
+		},
+		{
+			"name": "add generator",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"bus_name\": \"149\",\r\n  \"phases\": 3,\r\n  \"kw\": 40\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:5000/add_generator"
+			},
+			"response": []
+		},
+		{
+			"name": "modify load neighbourhood",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"neighbourhood\": 1,\r\n  \"factor\": 0.6\r\n}"
+				},
+				"url": "http://localhost:5000/modify_load_neighbourhood"
+			},
+			"response": []
+		},
+		{
+			"name": "modify load household",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"factor\": 0.9\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:5000/modify_load_household"
+			},
+			"response": []
+		},
+		{
+			"name": "add device",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"device_name\": \"television\",\r\n    \"phases\": 1,\r\n    \"kw\": 50\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:5000/add_device"
+			},
+			"response": []
+		},
+		{
+			"name": "create dfp",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"Peak Power Shaving 1\",\r\n    \"min_power_kw\": 40.0,\r\n    \"target_pf\": 0.8\r\n}"
+				},
+				"url": "http://localhost:5000/register_dfp"
+			},
+			"response": []
+		},
+		{
+			"name": "subscribe to dfp",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"dfp_name\": \"Peak Power Shaving 2\"\r\n}"
+				},
+				"url": "http://localhost:5000/subscribe_dfp"
+			},
+			"response": []
+		},
+		{
+			"name": "modify dfp",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"Peak Power Shaving 2\",\r\n    \"min_power_kw\": 12.0,\r\n    \"target_pf\": 0.8\r\n}"
+				},
+				"url": "http://localhost:5000/update_dfp"
+			},
+			"response": []
+		},
+		{
+			"name": "execute dfp",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"dfp_name\": \"Peak Power Shaving 2\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:5000/execute_dfp"
+			},
+			"response": []
+		},
+		{
+			"name": "unsubscribe from dfp",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"dfp_name\": \"Peak Power Shaving 2\"\r\n}"
+				},
+				"url": "http://localhost:5000/unsubscribe_dfp"
+			},
+			"response": []
+		},
+		{
+			"name": "delete dfp",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"Peak Power Shaving 1\"\r\n}"
+				},
+				"url": "http://localhost:5000/delete_dfp"
+			},
+			"response": []
+		},
+		{
+			"name": "modify load devices",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"power_threshold_kw\": 20,\r\n    \"reduction_factor\": 0.8\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:5000/modify_devices_in_bus"
+			},
+			"response": []
+		},
+		{
+			"name": "disconnect device",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"device_name\": \"television\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/disconnect_device",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"disconnect_device"
+					],
+					"query": [
+						{
+							"key": "",
+							"value": null,
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
