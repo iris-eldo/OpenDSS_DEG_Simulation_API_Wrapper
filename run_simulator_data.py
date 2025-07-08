@@ -3,11 +3,15 @@ import pandas as pd
 from flask import Flask, request, jsonify
 from main import OpenDSSCircuit
 import time
+import requests
 
 # --- Global Application Setup ---
 app = Flask(__name__)
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results_api')
 os.makedirs(RESULTS_DIR, exist_ok=True)
+
+# The endpoint for sending critical transformer alerts.
+CRITICAL_API_ENDPOINT = "http://localhost:3000/api/critical"
 
 print("--- Initializing Global OpenDSS Circuit with Automated Management ---")
 circuit = OpenDSSCircuit("")
@@ -19,16 +23,27 @@ def get_current_state_details(circuit_object: OpenDSSCircuit, management_status:
     """Helper function to gather results and include the management status."""
     pf_results = circuit_object.get_power_flow_results()
     buses_df = circuit_object.get_buses_with_loads()
+    capacity_info = circuit_object.get_system_capacity_info()
 
     total_load_kw = sum(v.get('load_kw', 0) for v in circuit_object.bus_capacities.values())
+    total_power_kw = pf_results['total_power_kW']
+    max_power_kva = capacity_info.get('maximum_circuit_power_kVA', 0)
+    
+    # Calculate loading percentage based on total transformer capacity
+    circuit_loading_percent = 0
+    if max_power_kva > 0:
+        circuit_loading_percent = (total_power_kw / max_power_kva) * 100
 
     return {
         "management_status": management_status,
         "power_summary": {
             "converged": pf_results['converged'],
-            "total_circuit_power_kW": round(pf_results['total_power_kW'], 2),
+            "total_circuit_power_kW": round(total_power_kw, 2),
             "total_losses_kW": round(pf_results['total_losses_kW'], 4),
             "total_load_kW": round(total_load_kw, 2),
+            "maximum_circuit_power_kVA": round(max_power_kva, 2),
+            "maximum_circuit_load_kW": round(capacity_info.get('maximum_circuit_load_kW', 0), 2),
+            "circuit_loading_percent": round(circuit_loading_percent, 2)
         },
         "voltage_profile": {
             "min_voltage_pu": round(buses_df['VMag_pu'].min(), 4) if not buses_df.empty else 0,
@@ -74,6 +89,9 @@ def save_state_to_file(state_details: dict, filename: str):
     output.append(f"Converged: {summary.get('converged')}")
     output.append(f"Total Circuit Power (from grid): {summary.get('total_circuit_power_kW'):.2f} kW")
     output.append(f"Total True Load: {summary.get('total_load_kW'):.2f} kW")
+    output.append(f"Maximum Circuit Power (Capacity): {summary.get('maximum_circuit_power_kVA'):.2f} kVA")
+    output.append(f"Maximum Circuit Load (Registered): {summary.get('maximum_circuit_load_kW'):.2f} kW")
+    output.append(f"Circuit Loading: {summary.get('circuit_loading_percent'):.2f}%")
     output.append(f"Total Losses: {summary.get('total_losses_kW'):.2f} kW\n")
 
     output.append("--- VOLTAGE PROFILE ---")
@@ -139,22 +157,81 @@ def log_dfp_activity(message: str):
         f.write(log_entry)
     print(f"DFP activity logged: {message}")
 
-# Save the initial state files after the first run
-if 'management_log' in management_status:
-    save_management_log_to_file(management_status['management_log'], "management_log.txt")
-initial_details = get_current_state_details(circuit, management_status)
-save_state_to_file(initial_details, "latest_api_results.txt")
-save_dfp_registry_to_file(circuit, "dfp_registry.txt")
-
-
-# --- API Endpoints ---
-@app.route('/get_node_data', methods=['GET'])
-def get_node_data_endpoint():
+def check_and_report_critical_transformers(state_details: dict):
     """
-    Runs a new simulation on the current state of the circuit and returns all bus data.
+    Checks for transformers over 80% loading, writes them to critical.txt,
+    and sends a POST request to a critical alert API.
+    """
+    bus_list = state_details.get('bus_details', [])
+    if not bus_list:
+        return
+
+    critical_buses = []
+    # Filter for buses that have transformers with loading > 80%
+    for bus_info in bus_list:
+        transformers = bus_info.get('Transformers', [])
+        if not transformers:
+            continue
+
+        critical_transformers_on_bus = []
+        for xfmr in transformers:
+            if xfmr and xfmr.get('loading_percent', 0) > 80:
+                critical_transformers_on_bus.append({
+                    "name": xfmr.get('name'),
+                    "loading_percent": xfmr.get('loading_percent'),
+                    "rated_kVA": xfmr.get('rated_kVA'),
+                    "current_kVA": xfmr.get('current_kVA')
+                })
+        
+        if critical_transformers_on_bus:
+            critical_buses.append({
+                "bus": bus_info.get('Bus'),
+                "critical_transformers": critical_transformers_on_bus
+            })
+
+    # If no transformers are in a critical state, ensure the file is clean.
+    filepath = os.path.join(RESULTS_DIR, "critical.txt")
+    if not critical_buses:
+        if os.path.exists(filepath):
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] All transformers are operating within normal limits (<80% capacity).\n")
+        return
+
+    # 1. Save the report to critical.txt
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    output = [
+        f"CRITICAL TRANSFORMER REPORT - {timestamp}",
+        "=" * 40,
+        ""
+    ]
+    for bus_data in critical_buses:
+        output.append(f"Bus: {bus_data['bus']}")
+        for xfmr in bus_data['critical_transformers']:
+            output.append(f"  - Transformer: {xfmr['name']}")
+            output.append(f"    - Loading: {xfmr['loading_percent']}%")
+            output.append(f"    - Rated kVA: {xfmr['rated_kVA']}")
+            output.append(f"    - Current kVA: {xfmr['current_kVA']}\n")
+
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write("\n".join(output))
+    print(f"CRITICAL: High-load transformer report saved to: {filepath}")
+
+    # 2. Send the API call
+    try:
+        response = requests.post(CRITICAL_API_ENDPOINT, json=critical_buses, timeout=5)
+        response.raise_for_status()
+        print(f"Successfully sent critical alert to {CRITICAL_API_ENDPOINT}. Status: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending critical alert to {CRITICAL_API_ENDPOINT}: {e}")
+
+
+# --- Combined State Update and Reporting Function ---
+def run_and_update_state():
+    """
+    Runs the simulation, gets the state, and saves all reports.
+    Returns the current state details for the API response.
     """
     global management_status
-
     management_status = circuit.solve_and_manage_loading()
 
     if 'management_log' in management_status:
@@ -162,7 +239,24 @@ def get_node_data_endpoint():
 
     current_details = get_current_state_details(circuit, management_status)
     save_state_to_file(current_details, "latest_api_results.txt")
+    
+    # Check for critical transformers after the state is updated.
+    check_and_report_critical_transformers(current_details)
+    
+    return current_details
 
+# Save the initial state files after the first run
+initial_details = run_and_update_state()
+save_dfp_registry_to_file(circuit, "dfp_registry.txt")
+
+
+# --- API Endpoints ---
+@app.route('/get_node_data', methods=['GET'])
+def get_node_data_endpoint():
+    """
+    Runs a new simulation and returns all bus data.
+    """
+    current_details = run_and_update_state()
     return jsonify({"status": "success", "results": current_details}), 200
 
 @app.route('/modify_load_neighbourhood', methods=['POST'])
@@ -174,12 +268,7 @@ def modify_load_neighbourhood_endpoint():
         return jsonify({"status": "error", "message": "Invalid payload."}), 400
 
     circuit.modify_loads_in_neighborhood(neighbourhood, factor)
-    management_status = circuit.solve_and_manage_loading()
-
-    if 'management_log' in management_status:
-        save_management_log_to_file(management_status['management_log'], "management_log.txt")
-    current_details = get_current_state_details(circuit, management_status)
-    save_state_to_file(current_details, "latest_api_results.txt")
+    current_details = run_and_update_state()
     return jsonify({"status": "success", "results": current_details}), 200
 
 @app.route('/modify_load_household', methods=['POST'])
@@ -194,11 +283,7 @@ def modify_load_household_endpoint():
     if result.get("status") != "success":
          return jsonify(result), 404 if "not found" in result.get("message", "") else 200
 
-    management_status = circuit.solve_and_manage_loading()
-    if 'management_log' in management_status:
-        save_management_log_to_file(management_status['management_log'], "management_log.txt")
-    current_details = get_current_state_details(circuit, management_status)
-    save_state_to_file(current_details, "latest_api_results.txt")
+    current_details = run_and_update_state()
     return jsonify({"status": "success", "results": current_details}), 200
 
 @app.route('/add_generator', methods=['POST'])
@@ -210,11 +295,7 @@ def add_generator_endpoint():
         return jsonify({"status": "error", "message": "Invalid payload."}), 400
 
     circuit.add_generation_to_bus(bus_name, kw, phases)
-    management_status = circuit.solve_and_manage_loading()
-    if 'management_log' in management_status:
-        save_management_log_to_file(management_status['management_log'], "management_log.txt")
-    current_details = get_current_state_details(circuit, management_status)
-    save_state_to_file(current_details, "latest_api_results.txt")
+    current_details = run_and_update_state()
     return jsonify({"status": "success", "results": current_details}), 200
 
 @app.route('/add_device', methods=['POST'])
@@ -226,11 +307,7 @@ def add_device_endpoint():
         return jsonify({"status": "error", "message": "Invalid payload."}), 400
 
     circuit.add_device_to_bus(bus_name, device_name, kw, phases)
-    management_status = circuit.solve_and_manage_loading()
-    if 'management_log' in management_status:
-        save_management_log_to_file(management_status['management_log'], "management_log.txt")
-    current_details = get_current_state_details(circuit, management_status)
-    save_state_to_file(current_details, "latest_api_results.txt")
+    current_details = run_and_update_state()
     return jsonify({"status": "success", "results": current_details}), 200
 
 @app.route('/disconnect_device', methods=['POST'])
@@ -244,11 +321,7 @@ def disconnect_device_endpoint():
     if not circuit.disconnect_device_from_bus(bus_name, device_name):
         return jsonify({"status": "not_found", "message": f"Device not found."}), 404
 
-    management_status = circuit.solve_and_manage_loading()
-    if 'management_log' in management_status:
-        save_management_log_to_file(management_status['management_log'], "management_log.txt")
-    current_details = get_current_state_details(circuit, management_status)
-    save_state_to_file(current_details, "latest_api_results.txt")
+    current_details = run_and_update_state()
     return jsonify({"status": "success", "results": current_details}), 200
 
 # --- DFP Management API Endpoints ---
@@ -265,9 +338,7 @@ def subscribe_dfp_endpoint():
     if result.get("status") != "success":
          return jsonify(result), 400
 
-    # Log the activity
     log_dfp_activity(f"SUBSCRIBED: Bus '{bus_name}' to DFP '{dfp_name}'.")
-
     current_details = get_current_state_details(circuit, management_status)
     save_state_to_file(current_details, "latest_api_results.txt")
     return jsonify({"status": "success", "message": f"Successfully subscribed bus '{bus_name}' to DFP '{dfp_name}'.", "results": current_details}), 200
@@ -284,9 +355,7 @@ def unsubscribe_dfp_endpoint():
     if result.get("status") != "success":
          return jsonify(result), 400
 
-    # Log the activity
     log_dfp_activity(f"UNSUBSCRIBED: Bus '{bus_name}' from DFP '{dfp_name}'.")
-
     current_details = get_current_state_details(circuit, management_status)
     save_state_to_file(current_details, "latest_api_results.txt")
     return jsonify({"status": "success", "message": f"Successfully unsubscribed bus '{bus_name}' from DFP '{dfp_name}'.", "results": current_details}), 200
@@ -306,8 +375,6 @@ def register_dfp_endpoint():
         return jsonify({"status": "error", "message": f"Invalid payload. Required: 'name' (str), 'min_power_kw' (float), 'target_pf' (float). Error: {e}"}), 400
 
     registered_dfp = circuit.register_dfp(dfp_name, min_power_kw, target_pf)
-
-    # Update files
     save_dfp_registry_to_file(circuit, "dfp_registry.txt")
     log_dfp_activity(f"CREATED: DFP '{dfp_name}' registered with details: {registered_dfp}.")
 
@@ -334,7 +401,6 @@ def update_dfp_endpoint():
     result = circuit.update_dfp(name, new_min_power_kw, new_target_pf)
 
     if result.get("status") == "success":
-        # Update files
         save_dfp_registry_to_file(circuit, "dfp_registry.txt")
         log_dfp_activity(f"MODIFIED: DFP '{name}' updated. New details: {result.get('data')}.")
         return jsonify(result), 200
@@ -352,7 +418,6 @@ def delete_dfp_endpoint():
     result = circuit.delete_dfp(name)
 
     if result.get("status") == "success":
-        # Update files
         save_dfp_registry_to_file(circuit, "dfp_registry.txt")
         log_dfp_activity(f"DELETED: DFP '{name}'.")
         current_details = get_current_state_details(circuit, management_status)
@@ -360,8 +425,6 @@ def delete_dfp_endpoint():
         return jsonify({"status": "success", "message": f"DFP '{name}' deleted successfully."}), 200
     else:
         return jsonify(result), 404
-
-# --- NEW ENDPOINTS START HERE ---
 
 @app.route('/modify_devices_in_bus', methods=['POST'])
 def modify_devices_in_bus_endpoint():
@@ -376,46 +439,52 @@ def modify_devices_in_bus_endpoint():
     except (TypeError, KeyError, ValueError) as e:
         return jsonify({"status": "error", "message": f"Invalid payload. Error: {e}"}), 400
 
-    result = circuit.modify_high_wattage_devices_in_bus(bus_name, power_threshold_kw, reduction_factor)
-    
-    # Re-run simulation to see the effect of the load change
-    management_status = circuit.solve_and_manage_loading()
-    if 'management_log' in management_status:
-        save_management_log_to_file(management_status['management_log'], "management_log.txt")
-    
-    current_details = get_current_state_details(circuit, management_status)
-    save_state_to_file(current_details, "latest_api_results.txt")
-    log_dfp_activity(f"DEVICE_MODIFICATION: on bus '{bus_name}'. Details: {result.get('message')}")
+    circuit.modify_high_wattage_devices_in_bus(bus_name, power_threshold_kw, reduction_factor)
+    current_details = run_and_update_state()
+    log_dfp_activity(f"DEVICE_MODIFICATION: on bus '{bus_name}'.")
 
     return jsonify({"status": "success", "results": current_details}), 200
 
 
 @app.route('/execute_dfp', methods=['POST'])
 def execute_dfp_endpoint():
-    """Executes a DFP's rules on all subscribed buses."""
+    """Executes a DFP's rules on all subscribed buses and reports on participation."""
     data = request.get_json()
     try:
         dfp_name = str(data['dfp_name'])
     except (TypeError, KeyError, ValueError):
         return jsonify({"status": "error", "message": "Invalid payload. Required: 'dfp_name' (str)."}), 400
 
+    # Execute the DFP logic
     result = circuit.execute_dfp(dfp_name)
     
     if result.get("status") != "success":
         return jsonify(result), 404 if "not found" in result.get("message", "") else 200
 
-    # Re-run simulation after executing the DFP
-    management_status = circuit.solve_and_manage_loading()
-    if 'management_log' in management_status:
-        save_management_log_to_file(management_status['management_log'], "management_log.txt")
-
-    current_details = get_current_state_details(circuit, management_status)
-    save_state_to_file(current_details, "latest_api_results.txt")
+    # Re-run simulation and get the complete, updated state
+    current_details = run_and_update_state()
     log_dfp_activity(f"EXECUTION: DFP '{dfp_name}' was run. Details: {result.get('details')}")
 
-    return jsonify({"status": "success", "message": result.get('message'), "results": current_details}), 200
+    # --- Build the custom response with participation data ---
+    participation_map = {item['bus_name']: item['participated'] for item in result.get('participation_data', [])}
+    
+    # Filter the full bus list to get only the subscribed buses
+    subscribed_buses_report = []
+    for bus_detail in current_details.get('bus_details', []):
+        bus_name = bus_detail.get('Bus')
+        if bus_name in participation_map:
+            # Add the new 'participated' attribute
+            bus_detail['participated'] = participation_map[bus_name]
+            subscribed_buses_report.append(bus_detail)
 
-# --- END NEW ENDPOINTS ---
+    # Construct the final response object
+    final_response = {
+        "status": "success",
+        "message": result.get('message'),
+        "subscribed_buses_report": subscribed_buses_report
+    }
+
+    return jsonify(final_response), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
