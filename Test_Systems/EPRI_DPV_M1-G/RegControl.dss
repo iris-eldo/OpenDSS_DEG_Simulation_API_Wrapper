@@ -1,0 +1,1 @@
+New "RegControl.m1_xfmr_regulator" transformer=M1_XFMR winding=2 tapwinding=2 vreg=122.0 band=3.0 ptratio=60 bus=temp enabled=true delay=15 tapdelay=45

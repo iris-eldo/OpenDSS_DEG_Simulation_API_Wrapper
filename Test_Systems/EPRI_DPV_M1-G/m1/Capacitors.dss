@@ -1,0 +1,6 @@
+New "Capacitor.cap2" phases=3 bus1=0x008ed880 kv=12.47 kvar=[ 1200] conn=wye enabled=true states=[ 1]
+New "CapControl.cap2_ctrl" capacitor=Cap2 element=line.temp2 terminal=1 Delay=30 DelayOFF=910 type=kvar ONsetting=540 OFFsetting=-840 VoltOverride=no Vmax=126 Vmin=114 PTratio=60
+New "Capacitor.cap1" phases=3 bus1=0x008c6578 kv=12.47 kvar=[ 1200] conn=wye enabled=true states=[ 0]
+New "CapControl.cap1_ctrl" capacitor=Cap1 element=line.temp2 terminal=1 Delay=45 DelayOFF=900 type=kvar ONsetting=540 OFFsetting=-840 VoltOverride=no Vmax=126 Vmin=114 PTratio=60
+New "Capacitor.cap3" phases=3 bus1=0x008dbe00 kv=12.47 kvar=[ 1200] conn=wye enabled=true states=[ 1]
+New "CapControl.cap3_ctrl" capacitor=Cap3 element=line.temp2 terminal=1 Delay=15 DelayOFF=920 type=kvar ONsetting=540 OFFsetting=-840 VoltOverride=no Vmax=126 Vmin=114 PTratio=60

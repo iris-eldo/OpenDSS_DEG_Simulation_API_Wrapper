@@ -1,0 +1,13 @@
+New "Monitor.subvi" element=transformer.m1_xfmr terminal=2 mode=0
+New "Monitor.subpq" element=transformer.m1_xfmr terminal=1 mode=17
+New "Monitor.feederpq" element=line.temp2 terminal=1 mode=17
+New "Monitor.v_m1" element=line.temp2 terminal=2 mode=0 residual=yes
+New "Monitor.highestimpedancebus" element=line.0x008c87d8_0x008f1de0 terminal=2 mode=0
+New "Monitor.cap1" element=capacitor.cap1 mode=33
+New "Monitor.cap2" element=capacitor.cap2 mode=33
+New "Monitor.cap3" element=capacitor.cap3 mode=33
+New "Monitor.tap1" element=transformer.m1_xfmr terminal=2 mode=2
+New "Monitor.voltagecap1" element=capacitor.cap1 mode=0
+New "Monitor.voltagecap2" element=capacitor.cap2 mode=0
+New "Monitor.voltagecap3" element=capacitor.cap3 mode=0
+New "Monitor.voltagetap1" element=transformer.m1_xfmr terminal=2 mode=0

@@ -1,0 +1,26 @@
+Clear
+New Circuit.eprik1
+
+
+Redirect LoadShape.DSS
+Redirect Vsource.dss
+Redirect LineCode.dss
+Redirect LoadShape.dss
+Redirect GrowthShape.dss
+Redirect TCC_Curve.dss
+Redirect Spectrum.dss
+Redirect k21_feeder\Branches.dss
+Redirect k21_feeder\Transformers.dss
+Redirect k21_feeder\Loads.dss
+Redirect k21_feeder\Capacitors.dss
+Redirect Line.dss
+Redirect Load.dss
+Redirect Transformer.dss
+Redirect RegControl.dss
+Redirect Reactor.dss
+Redirect Monitor.dss
+Redirect EnergyMeter.dss
+MakeBusList
+Redirect BusVoltageBases.dss  ! set voltage bases
+Buscoords BusCoords.dss
+GIScoords GISCoords.dss

@@ -1,0 +1,1 @@
+New "Transformer.m1_xfmr" phases=3 windings=2 buses=[sourcebus, temp, ] conns=[delta, wye, ] kVs=[67, 12.47, ] kVAs=[16800, 16800, ] XHL=8 sub=y subname=M1 MinTap=0.95 MaxTap=1.05 buses=[sourcebus, temp, ] conns=[delta, wye, ] kVs=[67, 12.47, ] kVAs=[16800, 16800, ] taps=[1, 1.01875, ] wdg=1 %R=0.2 RdcOhms=0.454244 wdg=2 %R=0.2 RdcOhms=0.00524507

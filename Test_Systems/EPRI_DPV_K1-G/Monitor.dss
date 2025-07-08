@@ -1,0 +1,8 @@
+New "Monitor.subvi" element=transformer.t2 terminal=2 mode=0
+New "Monitor.subpq" element=transformer.t2 terminal=1 mode=65 PPolar=No
+New "Monitor.feederpq" element=line.k21_feeder terminal=1 mode=65 PPolar=No
+New "Monitor.tap1" element=transformer.t2 terminal=2 mode=2
+New "Monitor.cap1" element=capacitor.10548920-1 mode=33
+New "Monitor.voltagecap1" element=capacitor.10548920-1 terminal=1 mode=0
+New "Monitor.voltagetap1" element=transformer.t2 terminal=2 mode=0
+New "Monitor.highestimpedancebus" element=line.ug_10540314 terminal=2 mode=0

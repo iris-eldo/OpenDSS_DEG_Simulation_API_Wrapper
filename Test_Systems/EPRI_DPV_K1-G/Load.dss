@@ -1,0 +1,1 @@
+New "Load.k_22_aggregate" phases=3 bus1=k22.1.2.3 kV=13.2 kW=7685 pf=1 status=variable model=4 CVRwatts=0.8 CVRvars=3 class=1 NumCust=1 yearly=AggLoadProfileK22

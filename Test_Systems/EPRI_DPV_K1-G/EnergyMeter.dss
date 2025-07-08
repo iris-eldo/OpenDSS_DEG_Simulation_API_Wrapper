@@ -1,0 +1,1 @@
+New "EnergyMeter.k21_feeder" element=line.K21_feeder terminal=1 option=(E, R, C) peakcurrent=(224.8647,207.6677,211.8367) PhaseVoltageReport=yes

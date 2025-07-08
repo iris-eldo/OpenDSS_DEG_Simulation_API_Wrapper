@@ -1,0 +1,1 @@
+New "Line.temp_sub" bus1=ls_bus bus2=feederhead Switch=True enabled=true phases=3 normamps=99999 emergamps=99999

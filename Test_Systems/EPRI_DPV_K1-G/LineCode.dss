@@ -1,0 +1,16 @@
+New "LineCode.4/0_al_ug" nphases=3 r1=0.0917 x1=0.028 r0=0.3861 x0=0.2678 normamps=232 units=kft
+New "LineCode.1/0_triplex_3ph" nphases=3 rmatrix=[  0.20176167   0.01804955   0.01804955 |  0.01804955   0.20176167   0.01804955 |  0.01804955   0.01804955   0.20176167 ] xmatrix=[  0.28577060   0.25445134   0.24648656 |  0.25445134   0.28577060   0.25445134 |  0.24648656   0.25445134   0.28577060 ] cmatrix=[ 15.00000000 -12.00000000 -12.00000000 |-12.00000000  15.00000000 -12.00000000 |-12.00000000 -12.00000000  15.00000000 ] normamps=202 emergamps=252.5 units=kft
+New "LineCode.1/0_triplex_1ph" normamps=202 emergamps=252.5 units=kft neutral=1 Kron=N nphases=1 rmatrix=[  0.25386817 ] xmatrix=[  0.07582623 ] cmatrix=[ 15.00000000 ]
+New "LineCode.unknown_750" nphases=3 rmatrix=[  0.04437530   0.01804955   0.01804955 |  0.01804955   0.04437530   0.01804955 |  0.01804955   0.01804955   0.04437530 ] xmatrix=[  0.26150996   0.24834508   0.24038031 |  0.24834508   0.26150996   0.24834508 |  0.24038031   0.24834508   0.26150996 ] cmatrix=[ 15.00000000 -12.00000000 -12.00000000 |-12.00000000  15.00000000 -12.00000000 |-12.00000000 -12.00000000  15.00000000 ] units=kft normamps=580 emergamps=725
+New "LineCode.oh-1ph_1/0ar" nphases=3 r1=0.53562 x1=0.54302 r0=0.86743 x0=1.3939 C1=9.421 C0=4.9579 units=km baseFreq=60 normamps=301 emergamps=301
+New "LineCode.oh-3ph_1/0ar" nphases=3 r1=0.53562 x1=0.52009 r0=0.85066 x0=1.479 C1=9.9323 C0=4.4906 units=km baseFreq=60 normamps=301 emergamps=301
+New "LineCode.oh-2ph_1/0ar" nphases=3 r1=0.53562 x1=0.55762 r0=0.84861 x0=1.4087 C1=9.1209 C0=4.8626 units=km baseFreq=60 normamps=301 emergamps=301
+New "LineCode.oh-3ph_4/0aa" nphases=3 r1=0.2703 x1=0.42527 r0=0.49915 x0=1.2611 C1=10.567 C0=4.6457 units=km baseFreq=60 normamps=498 emergamps=498
+New "LineCode.oh-3ph_4ar" nphases=3 r1=1.3515 x1=0.52295 r0=1.7493 x0=1.7101 C1=9.17 C0=4.2956 units=km baseFreq=60 normamps=175 emergamps=175
+New "LineCode.oh-1ph_4ar" nphases=3 r1=1.3515 x1=0.54581 r0=1.7703 x0=1.6447 C1=8.7325 C0=4.7158 units=km baseFreq=60 normamps=175 emergamps=175
+New "LineCode.oh-3ph_397aa" nphases=3 r1=0.14416 x1=0.39712 r0=0.37301 x0=1.233 C1=11.299 C0=4.7819 units=km baseFreq=60 normamps=590 emergamps=590
+New "LineCode.oh-1ph_6cu" nphases=3 r1=1.3546 x1=0.5314 r0=1.7766 x0=1.6312 C1=8.1749 C0=4.5139 units=km baseFreq=60 normamps=175 emergamps=175
+New "LineCode.oh-3ph_795aa" nphases=3 r1=0.073322 x1=0.37065 r0=0.30217 x0=1.2065 C1=12.158 C0=4.9291 units=km baseFreq=60 normamps=900 emergamps=900
+New "LineCode.oh-3ph_2cu" nphases=3 r1=0.54811 x1=0.46926 r0=0.88415 x0=1.4168 C1=9.4113 C0=4.3584 units=km baseFreq=60 normamps=304 emergamps=304
+New "LineCode.ug-1ph_1/0urd" nphases=3 r1=0.55774 x1=0.098425 r0=2.3622 x0=0.098425 C1=215.75 C0=215.75 units=km baseFreq=60 normamps=155 emergamps=155
+New "LineCode.ug-3ph_1/0urd" nphases=3 r1=0.55774 x1=0.16404 r0=1.1483 x0=0.098425 C1=215.75 C0=215.75 units=km baseFreq=60 normamps=155 emergamps=155

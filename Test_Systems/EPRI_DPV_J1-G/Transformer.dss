@@ -1,0 +1,1 @@
+New "Transformer.subxfmr" phases=3 windings=2 buses=[s, ls_bus, ] conns=[wye, wye, ] kVs=[68.8, 13.09, ] kVAs=[16000, 16000, ] NumTaps=16 XHL=11.63 buses=[s, ls_bus, ] conns=[wye, wye, ] kVs=[68.8, 13.09, ] kVAs=[16000, 16000, ] taps=[1, 1.0125, ] wdg=1 %R=0.596 RdcOhms=0.4995751 wdg=2 %R=0.596 RdcOhms=0.01808436 ppm_antifloat=5

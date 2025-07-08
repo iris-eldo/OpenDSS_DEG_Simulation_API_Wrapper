@@ -1,0 +1,1 @@
+New "Line.other_feeders" phases=3 bus1=subxfmr_lsb.1.2.3 bus2=feeders.1.2.3 r1=1E-008 x1=1E-009 r0=1E-008 x0=1E-008

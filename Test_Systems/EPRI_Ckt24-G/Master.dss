@@ -1,0 +1,26 @@
+Clear
+New Circuit.ckt24
+
+
+Redirect Vsource.dss
+Redirect WireData.dss
+Redirect LineGeometry.dss
+Redirect LineCode.dss
+Redirect LoadShape.dss
+Redirect GrowthShape.dss
+Redirect TCC_Curve.dss
+Redirect Spectrum.dss
+Redirect fdr_05410\Branches.dss
+Redirect fdr_05410\Transformers.dss
+Redirect fdr_05410\Loads.dss
+Redirect fdr_05410\Capacitors.dss
+Redirect Line.dss
+Redirect Load.dss
+Redirect Transformer.dss
+Redirect RegControl.dss
+Redirect Monitor.dss
+Redirect EnergyMeter.dss
+MakeBusList
+Redirect BusVoltageBases.dss  ! set voltage bases
+Buscoords BusCoords.dss
+GIScoords GISCoords.dss

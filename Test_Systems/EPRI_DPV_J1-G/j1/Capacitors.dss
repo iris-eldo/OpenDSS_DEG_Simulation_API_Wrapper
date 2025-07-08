@@ -1,0 +1,8 @@
+New "Capacitor.b4909-1" bus1=b4909 kv=12.47 kvar=[ 900] conn=wye
+New "CapControl.b4909-1" capacitor=B4909-1 element=Line.OH_B4904 terminal=1 Delay=30 type=volt ONsetting=120.5 OFFsetting=125 PTPhase=2 PTratio=60
+New "Capacitor.b4877-1" bus1=b4877 kv=12.47 kvar=[ 600] conn=wye
+New "CapControl.b4877-1" capacitor=B4877-1 element=Line.OH_B4873 terminal=1 Delay=32 type=volt ONsetting=121 OFFsetting=125 PTPhase=2 PTratio=60
+New "Capacitor.b4862-1" bus1=b4862 kv=12.47 kvar=[ 600] conn=wye
+New "Capacitor.b4829-1" bus1=b4829 kv=12.47 kvar=[ 600] conn=wye
+New "Capacitor.b18944" bus1=b18941 kv=12.47 kvar=[ 1200] conn=wye
+New "CapControl.b18944" capacitor=B18944 element=Line.OH_B18944 terminal=1 Delay=31 type=volt ONsetting=118 OFFsetting=124 PTPhase=1 PTratio=60

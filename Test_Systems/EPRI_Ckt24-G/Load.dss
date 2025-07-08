@@ -1,0 +1,1 @@
+New "Load.other_feeders" phases=3 bus1=feeders kV=34.5 xfkVA=23496.8 pf=0.992 conn=wye model=1 yearly=Other_Bus_Load allocationfactor=1

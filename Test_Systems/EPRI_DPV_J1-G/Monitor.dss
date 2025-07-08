@@ -1,0 +1,31 @@
+New "Monitor.subvi" element=transformer.subxfmr terminal=2 mode=0
+New "Monitor.subpq" element=transformer.subxfmr terminal=1 mode=65 PPolar=No
+New "Monitor.feederpq" element=line.oh_5964927408 terminal=1 mode=65 PPolar=No
+New "Monitor.tap9" element=transformer.subxfmr terminal=2 mode=2
+New "Monitor.tap5" element=transformer.regxfmr_b4874 terminal=2 mode=2
+New "Monitor.tap7" element=transformer.regxfmr_b4872 terminal=2 mode=2
+New "Monitor.tap8" element=transformer.regxfmr_b4868 terminal=2 mode=2
+New "Monitor.tap1" element=transformer.regxfmr_b18865 terminal=2 mode=2
+New "Monitor.tap3" element=transformer.regxfmr_b18863 terminal=2 mode=2
+New "Monitor.tap6" element=transformer.regxfmr_b18864 terminal=2 mode=2
+New "Monitor.tap2" element=transformer.regxfmr_b19008 terminal=2 mode=2
+New "Monitor.tap4" element=transformer.regxfmr_b19010 terminal=2 mode=2
+New "Monitor.cap3" element=capacitor.b4862-1 mode=33
+New "Monitor.cap4" element=capacitor.b4829-1 mode=33
+New "Monitor.cap5" element=capacitor.b4877-1 mode=33
+New "Monitor.cap1" element=capacitor.b4909-1 mode=33
+New "Monitor.cap2" element=capacitor.b18944 mode=33
+New "Monitor.voltagetap1" element=transformer.regxfmr_b18865 terminal=2 mode=0
+New "Monitor.voltagetap2" element=transformer.regxfmr_b19008 terminal=2 mode=0
+New "Monitor.voltagetap3" element=transformer.regxfmr_b18863 terminal=2 mode=0
+New "Monitor.voltagetap4" element=transformer.regxfmr_b19010 terminal=2 mode=0
+New "Monitor.voltagetap5" element=transformer.regxfmr_b4874 terminal=2 mode=0
+New "Monitor.voltagetap6" element=transformer.regxfmr_b18864 terminal=2 mode=0
+New "Monitor.voltagetap7" element=transformer.regxfmr_b4872 terminal=2 mode=0
+New "Monitor.voltagetap8" element=transformer.regxfmr_b4868 terminal=2 mode=0
+New "Monitor.voltagecap1" element=capacitor.b4909-1 mode=0
+New "Monitor.voltagecap2" element=capacitor.b18944 mode=0
+New "Monitor.voltagecap3" element=capacitor.b4862-1 mode=0
+New "Monitor.voltagecap4" element=capacitor.b4829-1 mode=0
+New "Monitor.voltagecap5" element=capacitor.b4877-1 mode=0
+New "Monitor.highestimpedancebus" element=line.oh_5962929303 terminal=2 mode=0

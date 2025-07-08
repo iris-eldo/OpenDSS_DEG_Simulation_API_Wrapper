@@ -1,0 +1,13 @@
+New "PVSystem.3p_existingsite2" phases=3 bus1=B4832_sec kv=0.416 kVA=209 irradiance=1 Pmpp=190 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.a_existing9" phases=1 bus1=X_B66452_Cust1-A.1 kv=0.24 kVA=11 irradiance=1 Pmpp=10 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.b_existing12" phases=1 bus1=X_B41861_Cust1-B.2 kv=0.24 kVA=8.8 irradiance=1 Pmpp=8 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.b_existing3" phases=1 bus1=X_B60964_Cust1-B.2 kv=0.24 kVA=11 irradiance=1 Pmpp=10 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.c_existing10" phases=1 bus1=X_B18989_Cust1-C.3 kv=0.24 kVA=11 irradiance=1 Pmpp=10 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.c_existing11" phases=1 bus1=X_6039329105_Cust1-C.3 kv=0.24 kVA=11 irradiance=1 Pmpp=10 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.c_existing5" phases=1 bus1=X_B61252_Cust1-C.3 kv=0.24 kVA=22 irradiance=1 Pmpp=20 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.3p_existingsite4" phases=3 bus1=B51854_sec2 kv=0.416 kVA=523 irradiance=1 Pmpp=475 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.3p_existingsite3" phases=3 bus1=5890628219_sec kv=0.416 kVA=836 irradiance=1 Pmpp=760 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.3p_existingsite1" phases=3 bus1=X_5865228330A kv=0.416 kVA=314 irradiance=1 Pmpp=285 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.c_existing13" phases=1 bus1=X_B26203_Cust1-C.3 kv=0.24 kVA=16 irradiance=1 Pmpp=14.5 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.c_existing2" phases=1 bus1=X_B55624_Cust1-C.3 kv=0.24 kVA=12.2 irradiance=1 Pmpp=11.1 pf=1 %Cutin=0.1 %Cutout=0.1
+New "PVSystem.b_existing7" phases=1 bus1=X_B4870_Cust1-B.2 kv=0.24 kVA=11 irradiance=1 Pmpp=10 pf=1 %Cutin=0.1 %Cutout=0.1
