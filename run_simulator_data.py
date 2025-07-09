@@ -4,11 +4,17 @@ from flask import Flask, request, jsonify
 from main import OpenDSSCircuit
 import time
 import requests
+import zipfile
+from werkzeug.utils import secure_filename
 
 # --- Global Application Setup ---
 app = Flask(__name__)
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results_api')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RESULTS_DIR = os.path.join(BASE_DIR, 'results_api')
+TEST_SYSTEMS_DIR = os.path.join(BASE_DIR, 'Test_Systems')
 os.makedirs(RESULTS_DIR, exist_ok=True)
+os.makedirs(TEST_SYSTEMS_DIR, exist_ok=True)
+
 
 # The endpoint for sending critical transformer alerts.
 CRITICAL_API_ENDPOINT = "http://localhost:3000/api/critical"
@@ -101,7 +107,7 @@ def save_state_to_file(state_details: dict, filename: str):
     output.append(f"Min/Avg/Max Voltage (p.u.): {voltage.get('min_voltage_pu'):.4f} / {voltage.get('avg_voltage_pu'):.4f} / {voltage.get('max_voltage_pu'):.4f}\n")
 
     output.append("--- DETAILED BUS & NODE DATA ---")
-    header = f"{'Bus':<10}{'VMag (pu)':<15}{'VAngle (deg)':<15}{'Load (kW)':<15}{'Gen (kW)':<15}{'Net (kW)':<15}"
+    header = f"{'Bus':<10}{'DFPs':<15}{'VMag (pu)':<15}{'VAngle (deg)':<15}{'Load (kW)':<15}{'Gen (kW)':<15}{'Net (kW)':<15}"
     output.append(header)
     output.append("-" * len(header))
 
@@ -113,30 +119,21 @@ def save_state_to_file(state_details: dict, filename: str):
             total_load = bus_nodes[0].get('Load_kW', 0)
             total_gen = bus_nodes[0].get('Gen_kW', 0)
             total_net = bus_nodes[0].get('Net_Power_kW', 0)
-            
-            output.append(f"{bus_name:<10}{bus_nodes[0].get('VMag_pu', 0):<15.4f}{bus_nodes[0].get('VAngle', 0):<15.2f}{total_load:<15.2f}{total_gen:<15.2f}{total_net:<15.2f}")
+            dfp_list_str = str(bus_info.get('DFPs', []))
+
+            output.append(f"{bus_name:<10}{dfp_list_str:<15}{bus_nodes[0].get('VMag_pu', 0):<15.4f}{bus_nodes[0].get('VAngle', 0):<15.2f}{total_load:<15.2f}{total_gen:<15.2f}{total_net:<15.2f}")
             processed_buses.add(bus_name)
-            
-            subscribed_dfps = bus_info.get('SubscribedDFPs', [])
-            if subscribed_dfps:
-                output.append(f"  -> {'Subscribed DFPs:':<18}")
-                for dfp in subscribed_dfps:
-                    dfp_line = (f"     - Name: {dfp.get('name', 'N/A')}, "
-                                f"Min Power: {dfp.get('min_power_kw', 0):.2f} kW, "
-                                f"Target PF: {dfp.get('target_pf', 0):.2f}, "
-                                f"Last Participation: {dfp.get('last_participation_status', 'N/A')}")
-                    output.append(dfp_line)
 
             if bus_nodes[0].get('Transformers'):
                 for xfmr in bus_nodes[0]['Transformers']:
                     if xfmr:
                         status_line = f"Status: {xfmr.get('status')} ({xfmr.get('loading_percent')}%)"
                         rating_line = f"Rating: {xfmr.get('rated_kVA')} kVA"
-                        output.append(f"  -> {'Transformer:':<18} {xfmr.get('name'):<25} {status_line:<25} {rating_line}")
+                        output.append(f"  -> {'Transformer:':<15} {xfmr.get('name'):<25} {status_line:<25} {rating_line}")
 
             if bus_nodes[0].get('Devices'):
                 for device in bus_nodes[0]['Devices']:
-                    output.append(f"  -> {'Device:':<18} {device.get('device_name', ''):<25} {device.get('kw', 0):>10.2f} kW")
+                    output.append(f"  -> {'Device:':<15} {device.get('device_name', ''):<25} {device.get('kw', 0):>10.2f} kW")
             
             if bus_nodes[0].get('StorageDevices'):
                 for storage in bus_nodes[0]['StorageDevices']:
@@ -148,8 +145,8 @@ def save_state_to_file(state_details: dict, filename: str):
                         discharge_rate_str = f"{storage.get('actual_discharge_rate', 0):.2f}/{storage.get('build_discharge_rate', 0):.2f}"
                         storage_line_3 = f"Rates C(Act/Bld): {charge_rate_str} kW | D(Act/Bld): {discharge_rate_str} kW"
 
-                        output.append(f"  -> {'Storage:':<18} {storage.get('device_name', ''):<25} {storage_line_1:<25} {storage_line_2}")
-                        output.append(f"  -> {'':<18} {'':<25} {storage_line_3}")
+                        output.append(f"  -> {'Storage:':<15} {storage.get('device_name', ''):<25} {storage_line_1:<25} {storage_line_2}")
+                        output.append(f"  -> {'':<15} {'':<25} {storage_line_3}")
 
 
     with open(filepath, 'w', encoding='utf-8') as f: f.write("\n".join(output))
@@ -367,15 +364,14 @@ def add_storage_device_endpoint():
 def toggle_storage_device_endpoint():
     data = request.get_json()
     try:
-        bus_name = str(data['bus_name'])
         device_name = str(data['device_name'])
         action = str(data.get('action', 'toggle')).lower()
         if action not in ['toggle', 'disconnect']:
             return jsonify({"status": "error", "message": "Invalid action. Must be 'toggle' or 'disconnect'."}), 400
     except (TypeError, KeyError, ValueError):
-        return jsonify({"status": "error", "message": "Invalid payload. Required: 'bus_name' (string), 'device_name' (string) and optional 'action' (string: 'toggle' or 'disconnect')."}), 400
+        return jsonify({"status": "error", "message": "Invalid payload. Required: 'device_name' (string) and optional 'action' (string: 'toggle' or 'disconnect')."}), 400
 
-    result = circuit.toggle_storage_device(bus_name, device_name, action)
+    result = circuit.toggle_storage_device(device_name, action)
     if result.get("status") != "success":
         if "not found" in result.get("message", "").lower():
             return jsonify(result), 404
@@ -480,7 +476,7 @@ def delete_dfp_endpoint():
         save_dfp_registry_to_file(circuit, "dfp_registry.txt")
         log_dfp_activity(f"DELETED: DFP '{name}'.")
         current_details = run_and_update_state()
-        return jsonify({"status": "success", "message": f"DFP '{name}' deleted successfully."}), 200
+        return jsonify({"status": "success", "message": f"DFP '{name}' deleted successfully.", "results": current_details}), 200
     else:
         return jsonify(result), 404
 
@@ -502,7 +498,6 @@ def modify_devices_in_bus_endpoint():
     log_dfp_activity(f"DEVICE_MODIFICATION: on bus '{bus_name}'.")
 
     return jsonify({"status": "success", "results": current_details}), 200
-
 
 @app.route('/execute_dfp', methods=['POST'])
 def execute_dfp_endpoint():
@@ -528,6 +523,83 @@ def execute_dfp_endpoint():
         "details": result.get('details'),
         "results": current_details # Return the full updated state
     }), 200
+
+@app.route('/upload_test_system', methods=['POST'])
+def upload_test_system():
+    """
+    Receives a .zip file containing a new test system and extracts it
+    to the Test_Systems directory.
+    """
+    if 'file' not in request.files:
+        return jsonify({"status": "error", "message": "No file part in the request"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"status": "error", "message": "No file selected for uploading"}), 400
+
+    if file and file.filename.endswith('.zip'):
+        filename = secure_filename(file.filename)
+        zip_path = os.path.join(TEST_SYSTEMS_DIR, filename)
+        file.save(zip_path)
+
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                # Extract to a directory named after the zip file (without .zip)
+                extract_path = os.path.join(TEST_SYSTEMS_DIR, os.path.splitext(filename)[0])
+                os.makedirs(extract_path, exist_ok=True)
+                zip_ref.extractall(extract_path)
+            os.remove(zip_path) # Clean up the zip file
+            return jsonify({"status": "success", "message": f"Test system '{filename}' uploaded and extracted to '{extract_path}'."}), 200
+        except zipfile.BadZipFile:
+            os.remove(zip_path)
+            return jsonify({"status": "error", "message": "Invalid zip file."}), 400
+        except Exception as e:
+            # Clean up in case of other errors
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
+            return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
+
+    else:
+        return jsonify({"status": "error", "message": "Invalid file type. Please upload a .zip file."}), 400
+
+@app.route('/switch_active_system', methods=['POST'])
+def switch_active_system():
+    """
+    Switches the active OpenDSS circuit to a new test system.
+    Expects a JSON payload with the key 'system_name', which is the
+    name of the folder in Test_Systems.
+    """
+    data = request.get_json()
+    if not data or 'system_name' not in data:
+        return jsonify({"status": "error", "message": "Payload must contain 'system_name'."}), 400
+
+    system_name = data['system_name']
+    master_file_path = os.path.join(TEST_SYSTEMS_DIR, system_name, 'Master.dss')
+
+    if not os.path.exists(master_file_path):
+        return jsonify({"status": "error", "message": f"Master.dss not found for system '{system_name}' at path '{master_file_path}'."}), 404
+
+    global circuit, management_status
+    try:
+        print(f"--- Switching active circuit to: {system_name} ---")
+        circuit = OpenDSSCircuit(master_file_path)
+        management_status = circuit.solve_and_manage_loading()
+        print(f"--- New circuit '{system_name}' loaded and simulated. Status: {management_status.get('status')} ---")
+        
+        # After switching, get the new state and return it
+        current_details = run_and_update_state()
+        return jsonify({
+            "status": "success",
+            "message": f"Switched to test system '{system_name}'.",
+            "results": current_details
+        }), 200
+
+    except Exception as e:
+        # If it fails, revert to the default
+        print(f"Failed to load new circuit. Reverting to default. Error: {e}")
+        circuit = OpenDSSCircuit("")
+        management_status = circuit.solve_and_manage_loading()
+        return jsonify({"status": "error", "message": f"Failed to load circuit '{system_name}'. Error: {e}. Reverted to default."}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
