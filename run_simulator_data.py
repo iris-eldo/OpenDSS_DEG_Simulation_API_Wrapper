@@ -26,6 +26,7 @@ def get_current_state_details(circuit_object: OpenDSSCircuit, management_status:
     capacity_info = circuit_object.get_system_capacity_info()
 
     total_load_kw = sum(v.get('load_kw', 0) for v in circuit_object.bus_capacities.values())
+    total_gen_kw = sum(v.get('gen_kw', 0) for v in circuit_object.bus_capacities.values())
     total_power_kw = pf_results['total_power_kW']
     max_power_kva = capacity_info.get('maximum_circuit_power_kVA', 0)
     
@@ -41,6 +42,7 @@ def get_current_state_details(circuit_object: OpenDSSCircuit, management_status:
             "total_circuit_power_kW": round(total_power_kw, 2),
             "total_losses_kW": round(pf_results['total_losses_kW'], 4),
             "total_load_kW": round(total_load_kw, 2),
+            "total_gen_kW": round(total_gen_kw, 2),
             "maximum_circuit_power_kVA": round(max_power_kva, 2),
             "maximum_circuit_load_kW": round(capacity_info.get('maximum_circuit_load_kW', 0), 2),
             "circuit_loading_percent": round(circuit_loading_percent, 2)
@@ -88,7 +90,8 @@ def save_state_to_file(state_details: dict, filename: str):
     output.append("--- POWER SUMMARY ---")
     output.append(f"Converged: {summary.get('converged')}")
     output.append(f"Total Circuit Power (from grid): {summary.get('total_circuit_power_kW'):.2f} kW")
-    output.append(f"Total True Load: {summary.get('total_load_kW'):.2f} kW")
+    output.append(f"Total System Load: {summary.get('total_load_kW'):.2f} kW")
+    output.append(f"Total System Generation: {summary.get('total_gen_kW'):.2f} kW")
     output.append(f"Maximum Circuit Power (Capacity): {summary.get('maximum_circuit_power_kVA'):.2f} kVA")
     output.append(f"Maximum Circuit Load (Registered): {summary.get('maximum_circuit_load_kW'):.2f} kW")
     output.append(f"Circuit Loading: {summary.get('circuit_loading_percent'):.2f}%")
@@ -125,6 +128,20 @@ def save_state_to_file(state_details: dict, filename: str):
             if bus_nodes[0].get('Devices'):
                 for device in bus_nodes[0]['Devices']:
                     output.append(f"  -> {'Device:':<15} {device.get('device_name', ''):<25} {device.get('kw', 0):>10.2f} kW")
+            
+            if bus_nodes[0].get('StorageDevices'):
+                for storage in bus_nodes[0]['StorageDevices']:
+                    if storage:
+                        storage_line_1 = f"Mode: {storage.get('mode', 'N/A').upper()}"
+                        storage_line_2 = f"Energy: {storage.get('current_energy_kwh', 0):.2f} / {storage.get('max_capacity_kwh', 0):.2f} kWh"
+                        
+                        charge_rate_str = f"{storage.get('actual_charge_rate', 0):.2f}/{storage.get('build_charge_rate', 0):.2f}"
+                        discharge_rate_str = f"{storage.get('actual_discharge_rate', 0):.2f}/{storage.get('build_discharge_rate', 0):.2f}"
+                        storage_line_3 = f"Rates C(Act/Bld): {charge_rate_str} kW | D(Act/Bld): {discharge_rate_str} kW"
+
+                        output.append(f"  -> {'Storage:':<15} {storage.get('device_name', ''):<25} {storage_line_1:<25} {storage_line_2}")
+                        output.append(f"  -> {'':<15} {'':<25} {storage_line_3}")
+
 
     with open(filepath, 'w', encoding='utf-8') as f: f.write("\n".join(output))
     print(f"Results summary updated in file: {filepath}")
@@ -167,7 +184,6 @@ def check_and_report_critical_transformers(state_details: dict):
         return
 
     critical_buses = []
-    # Filter for buses that have transformers with loading > 80%
     for bus_info in bus_list:
         transformers = bus_info.get('Transformers', [])
         if not transformers:
@@ -189,7 +205,6 @@ def check_and_report_critical_transformers(state_details: dict):
                 "critical_transformers": critical_transformers_on_bus
             })
 
-    # If no transformers are in a critical state, ensure the file is clean.
     filepath = os.path.join(RESULTS_DIR, "critical.txt")
     if not critical_buses:
         if os.path.exists(filepath):
@@ -197,7 +212,6 @@ def check_and_report_critical_transformers(state_details: dict):
                 f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] All transformers are operating within normal limits (<80% capacity).\n")
         return
 
-    # 1. Save the report to critical.txt
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
     output = [
         f"CRITICAL TRANSFORMER REPORT - {timestamp}",
@@ -216,13 +230,12 @@ def check_and_report_critical_transformers(state_details: dict):
         f.write("\n".join(output))
     print(f"CRITICAL: High-load transformer report saved to: {filepath}")
 
-    # 2. Send the API call
     try:
         response = requests.post(CRITICAL_API_ENDPOINT, json=critical_buses, timeout=5)
         response.raise_for_status()
-        print(f"Successfully sent critical alert to {CRITICAL_API_ENDPOINT}. Status: {response.status_code}")
+        print(f"Successfully sent critical alert {critical_buses} to {CRITICAL_API_ENDPOINT}. Status: {response.status_code}")
     except requests.exceptions.RequestException as e:
-        print(f"Error sending critical alert to {CRITICAL_API_ENDPOINT}: {e}")
+        print(f"Error sending critical alert {critical_buses} to {CRITICAL_API_ENDPOINT}: {e}")
 
 
 # --- Combined State Update and Reporting Function ---
@@ -240,7 +253,6 @@ def run_and_update_state():
     current_details = get_current_state_details(circuit, management_status)
     save_state_to_file(current_details, "latest_api_results.txt")
     
-    # Check for critical transformers after the state is updated.
     check_and_report_critical_transformers(current_details)
     
     return current_details
@@ -323,6 +335,45 @@ def disconnect_device_endpoint():
 
     current_details = run_and_update_state()
     return jsonify({"status": "success", "results": current_details}), 200
+
+# --- Storage Device API Endpoints ---
+
+@app.route('/add_storage_device', methods=['POST'])
+def add_storage_device_endpoint():
+    data = request.get_json()
+    try:
+        bus_name = str(data['bus_name'])
+        device_name = str(data['device_name'])
+        max_capacity_kwh = float(data['max_capacity_kwh'])
+        charge_rate_kw = float(data['charge_rate_kw'])
+        discharge_rate_kw = float(data['discharge_rate_kw'])
+    except (TypeError, KeyError, ValueError) as e:
+        return jsonify({"status": "error", "message": f"Invalid payload. Required: bus_name, device_name, max_capacity_kwh, charge_rate_kw, discharge_rate_kw. Error: {e}"}), 400
+
+    circuit.add_storage_device(bus_name, device_name, max_capacity_kwh, charge_rate_kw, discharge_rate_kw)
+    current_details = run_and_update_state()
+    return jsonify({"status": "success", "message": f"Storage device '{device_name}' added.", "results": current_details}), 200
+
+@app.route('/toggle_storage_device', methods=['POST'])
+def toggle_storage_device_endpoint():
+    data = request.get_json()
+    try:
+        device_name = str(data['device_name'])
+        action = str(data.get('action', 'toggle')).lower()
+        if action not in ['toggle', 'disconnect']:
+            return jsonify({"status": "error", "message": "Invalid action. Must be 'toggle' or 'disconnect'."}), 400
+    except (TypeError, KeyError, ValueError):
+        return jsonify({"status": "error", "message": "Invalid payload. Required: 'device_name' (string) and optional 'action' (string: 'toggle' or 'disconnect')."}), 400
+
+    result = circuit.toggle_storage_device(device_name, action)
+    if result.get("status") != "success":
+        if "not found" in result.get("message", "").lower():
+            return jsonify(result), 404
+        return jsonify(result), 400
+
+    current_details = run_and_update_state()
+    return jsonify({"status": "success", "message": result['message'], "results": current_details}), 200
+
 
 # --- DFP Management API Endpoints ---
 
@@ -455,29 +506,23 @@ def execute_dfp_endpoint():
     except (TypeError, KeyError, ValueError):
         return jsonify({"status": "error", "message": "Invalid payload. Required: 'dfp_name' (str)."}), 400
 
-    # Execute the DFP logic
     result = circuit.execute_dfp(dfp_name)
     
     if result.get("status") != "success":
         return jsonify(result), 404 if "not found" in result.get("message", "") else 200
 
-    # Re-run simulation and get the complete, updated state
     current_details = run_and_update_state()
     log_dfp_activity(f"EXECUTION: DFP '{dfp_name}' was run. Details: {result.get('details')}")
 
-    # --- Build the custom response with participation data ---
     participation_map = {item['bus_name']: item['participated'] for item in result.get('participation_data', [])}
     
-    # Filter the full bus list to get only the subscribed buses
     subscribed_buses_report = []
     for bus_detail in current_details.get('bus_details', []):
         bus_name = bus_detail.get('Bus')
         if bus_name in participation_map:
-            # Add the new 'participated' attribute
             bus_detail['participated'] = participation_map[bus_name]
             subscribed_buses_report.append(bus_detail)
 
-    # Construct the final response object
     final_response = {
         "status": "success",
         "message": result.get('message'),
