@@ -208,7 +208,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"dfp_name\": \"Peak Power Shaving 2\"\r\n}"
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"dfp_name\": \"Peak Power Shaving 2\"\r\n}"
 				},
 				"url": "http://localhost:5000/unsubscribe_dfp"
 			},
@@ -295,6 +295,49 @@
 						}
 					]
 				}
+			},
+			"response": []
+		},
+		{
+			"name": "add storage",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"bus_name\": \"1\",\r\n  \"device_name\": \"MyBattery\",\r\n  \"max_capacity_kwh\": 20.0,\r\n  \"charge_rate_kw\": 40.0,\r\n  \"discharge_rate_kw\": 2.0\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:5000/add_storage_device"
+			},
+			"response": []
+		},
+		{
+			"name": "toggle storage",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"device_name\": \"MyBattery\",\r\n  \"action\": \"toggle\"\r\n}"
+				},
+				"url": "http://localhost:5000/toggle_storage_device"
 			},
 			"response": []
 		}
