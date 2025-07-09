@@ -101,7 +101,7 @@ def save_state_to_file(state_details: dict, filename: str):
     output.append(f"Min/Avg/Max Voltage (p.u.): {voltage.get('min_voltage_pu'):.4f} / {voltage.get('avg_voltage_pu'):.4f} / {voltage.get('max_voltage_pu'):.4f}\n")
 
     output.append("--- DETAILED BUS & NODE DATA ---")
-    header = f"{'Bus':<10}{'DFPs':<15}{'VMag (pu)':<15}{'VAngle (deg)':<15}{'Load (kW)':<15}{'Gen (kW)':<15}{'Net (kW)':<15}"
+    header = f"{'Bus':<10}{'VMag (pu)':<15}{'VAngle (deg)':<15}{'Load (kW)':<15}{'Gen (kW)':<15}{'Net (kW)':<15}"
     output.append(header)
     output.append("-" * len(header))
 
@@ -113,21 +113,30 @@ def save_state_to_file(state_details: dict, filename: str):
             total_load = bus_nodes[0].get('Load_kW', 0)
             total_gen = bus_nodes[0].get('Gen_kW', 0)
             total_net = bus_nodes[0].get('Net_Power_kW', 0)
-            dfp_list_str = str(bus_info.get('DFPs', []))
-
-            output.append(f"{bus_name:<10}{dfp_list_str:<15}{bus_nodes[0].get('VMag_pu', 0):<15.4f}{bus_nodes[0].get('VAngle', 0):<15.2f}{total_load:<15.2f}{total_gen:<15.2f}{total_net:<15.2f}")
+            
+            output.append(f"{bus_name:<10}{bus_nodes[0].get('VMag_pu', 0):<15.4f}{bus_nodes[0].get('VAngle', 0):<15.2f}{total_load:<15.2f}{total_gen:<15.2f}{total_net:<15.2f}")
             processed_buses.add(bus_name)
+            
+            subscribed_dfps = bus_info.get('SubscribedDFPs', [])
+            if subscribed_dfps:
+                output.append(f"  -> {'Subscribed DFPs:':<18}")
+                for dfp in subscribed_dfps:
+                    dfp_line = (f"     - Name: {dfp.get('name', 'N/A')}, "
+                                f"Min Power: {dfp.get('min_power_kw', 0):.2f} kW, "
+                                f"Target PF: {dfp.get('target_pf', 0):.2f}, "
+                                f"Last Participation: {dfp.get('last_participation_status', 'N/A')}")
+                    output.append(dfp_line)
 
             if bus_nodes[0].get('Transformers'):
                 for xfmr in bus_nodes[0]['Transformers']:
                     if xfmr:
                         status_line = f"Status: {xfmr.get('status')} ({xfmr.get('loading_percent')}%)"
                         rating_line = f"Rating: {xfmr.get('rated_kVA')} kVA"
-                        output.append(f"  -> {'Transformer:':<15} {xfmr.get('name'):<25} {status_line:<25} {rating_line}")
+                        output.append(f"  -> {'Transformer:':<18} {xfmr.get('name'):<25} {status_line:<25} {rating_line}")
 
             if bus_nodes[0].get('Devices'):
                 for device in bus_nodes[0]['Devices']:
-                    output.append(f"  -> {'Device:':<15} {device.get('device_name', ''):<25} {device.get('kw', 0):>10.2f} kW")
+                    output.append(f"  -> {'Device:':<18} {device.get('device_name', ''):<25} {device.get('kw', 0):>10.2f} kW")
             
             if bus_nodes[0].get('StorageDevices'):
                 for storage in bus_nodes[0]['StorageDevices']:
@@ -139,8 +148,8 @@ def save_state_to_file(state_details: dict, filename: str):
                         discharge_rate_str = f"{storage.get('actual_discharge_rate', 0):.2f}/{storage.get('build_discharge_rate', 0):.2f}"
                         storage_line_3 = f"Rates C(Act/Bld): {charge_rate_str} kW | D(Act/Bld): {discharge_rate_str} kW"
 
-                        output.append(f"  -> {'Storage:':<15} {storage.get('device_name', ''):<25} {storage_line_1:<25} {storage_line_2}")
-                        output.append(f"  -> {'':<15} {'':<25} {storage_line_3}")
+                        output.append(f"  -> {'Storage:':<18} {storage.get('device_name', ''):<25} {storage_line_1:<25} {storage_line_2}")
+                        output.append(f"  -> {'':<18} {'':<25} {storage_line_3}")
 
 
     with open(filepath, 'w', encoding='utf-8') as f: f.write("\n".join(output))
@@ -358,14 +367,15 @@ def add_storage_device_endpoint():
 def toggle_storage_device_endpoint():
     data = request.get_json()
     try:
+        bus_name = str(data['bus_name'])
         device_name = str(data['device_name'])
         action = str(data.get('action', 'toggle')).lower()
         if action not in ['toggle', 'disconnect']:
             return jsonify({"status": "error", "message": "Invalid action. Must be 'toggle' or 'disconnect'."}), 400
     except (TypeError, KeyError, ValueError):
-        return jsonify({"status": "error", "message": "Invalid payload. Required: 'device_name' (string) and optional 'action' (string: 'toggle' or 'disconnect')."}), 400
+        return jsonify({"status": "error", "message": "Invalid payload. Required: 'bus_name' (string), 'device_name' (string) and optional 'action' (string: 'toggle' or 'disconnect')."}), 400
 
-    result = circuit.toggle_storage_device(device_name, action)
+    result = circuit.toggle_storage_device(bus_name, device_name, action)
     if result.get("status") != "success":
         if "not found" in result.get("message", "").lower():
             return jsonify(result), 404
@@ -390,8 +400,7 @@ def subscribe_dfp_endpoint():
          return jsonify(result), 400
 
     log_dfp_activity(f"SUBSCRIBED: Bus '{bus_name}' to DFP '{dfp_name}'.")
-    current_details = get_current_state_details(circuit, management_status)
-    save_state_to_file(current_details, "latest_api_results.txt")
+    current_details = run_and_update_state()
     return jsonify({"status": "success", "message": f"Successfully subscribed bus '{bus_name}' to DFP '{dfp_name}'.", "results": current_details}), 200
 
 @app.route('/unsubscribe_dfp', methods=['POST'])
@@ -407,8 +416,7 @@ def unsubscribe_dfp_endpoint():
          return jsonify(result), 400
 
     log_dfp_activity(f"UNSUBSCRIBED: Bus '{bus_name}' from DFP '{dfp_name}'.")
-    current_details = get_current_state_details(circuit, management_status)
-    save_state_to_file(current_details, "latest_api_results.txt")
+    current_details = run_and_update_state()
     return jsonify({"status": "success", "message": f"Successfully unsubscribed bus '{bus_name}' from DFP '{dfp_name}'.", "results": current_details}), 200
 
 @app.route('/register_dfp', methods=['POST'])
@@ -471,8 +479,7 @@ def delete_dfp_endpoint():
     if result.get("status") == "success":
         save_dfp_registry_to_file(circuit, "dfp_registry.txt")
         log_dfp_activity(f"DELETED: DFP '{name}'.")
-        current_details = get_current_state_details(circuit, management_status)
-        save_state_to_file(current_details, "latest_api_results.txt")
+        current_details = run_and_update_state()
         return jsonify({"status": "success", "message": f"DFP '{name}' deleted successfully."}), 200
     else:
         return jsonify(result), 404
@@ -511,25 +518,16 @@ def execute_dfp_endpoint():
     if result.get("status") != "success":
         return jsonify(result), 404 if "not found" in result.get("message", "") else 200
 
+    # Re-run simulation to reflect changes from DFP execution
     current_details = run_and_update_state()
     log_dfp_activity(f"EXECUTION: DFP '{dfp_name}' was run. Details: {result.get('details')}")
 
-    participation_map = {item['bus_name']: item['participated'] for item in result.get('participation_data', [])}
-    
-    subscribed_buses_report = []
-    for bus_detail in current_details.get('bus_details', []):
-        bus_name = bus_detail.get('Bus')
-        if bus_name in participation_map:
-            bus_detail['participated'] = participation_map[bus_name]
-            subscribed_buses_report.append(bus_detail)
-
-    final_response = {
+    return jsonify({
         "status": "success",
         "message": result.get('message'),
-        "subscribed_buses_report": subscribed_buses_report
-    }
-
-    return jsonify(final_response), 200
+        "details": result.get('details'),
+        "results": current_details # Return the full updated state
+    }), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
