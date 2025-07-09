@@ -8,6 +8,7 @@ A Python-based simulation tool for analyzing and managing power distribution sys
 - **Critical System Monitoring**: Added `critical.txt` in the `results_api` directory to track critical system events and alerts.
 - **Enhanced Logging**: Improved logging system for better tracking of system operations and DFP activities.
 - **API Documentation**: Complete API reference with request/response examples for all endpoints.
+- **Storage Integration**: Added support for connecting and managing storage devices in the grid.
 
 ## Features
 
@@ -52,8 +53,7 @@ A Python-based simulation tool for analyzing and managing power distribution sys
 1. Clone this repository:
    ```bash
    git clone <repository-url>
-   cd FIDE-Project-5---The-Beckn-World-Engine
-   git checkout OpenDSS
+   cd opendss_testing
    ```
 
 2. Create and activate a virtual environment (recommended):
@@ -107,21 +107,20 @@ We provide a Postman collection (`DEG_APIs.postman_collection`) to help you test
 
 ### Power Flow and System Management
 
-#### 1. Run Simulation
-- **Endpoint**: `POST /run_simulation`
-- **Description**: Runs a new power flow simulation with the current system state
-- **Response**: Returns the latest system state
-- **Example (PowerShell)**:
-  ```powershell
-  Invoke-RestMethod -Uri "http://localhost:5000/run_simulation" -Method Post -ContentType "application/json"
-  ```
-
-#### 2. Get System State
+#### 1. Get System State
 - **Endpoint**: `GET /get_state`
 - **Description**: Retrieves the current system state
 - **Response**: Returns the current system state including bus data and power flow results
+- **Example (PowerShell)**:
+  ```powershell
+  Invoke-RestMethod -Uri "http://localhost:5000/get_state" -Method Get
+  ```
+- **Example (Linux)**:
+  ```bash
+  curl -X GET http://localhost:5000/get_state
+  ```
 
-#### 3. Modify Load in a Neighborhood
+#### 2. Modify Load in a Neighborhood
 - **Endpoint**: `POST /modify_load_neighbourhood`
 - **Description**: Adjusts the load factor for all loads in a specific neighborhood
 - **Request Body**:
@@ -139,8 +138,14 @@ We provide a Postman collection (`DEG_APIs.postman_collection`) to help you test
   } | ConvertTo-Json
   Invoke-RestMethod -Uri "http://localhost:5000/modify_load_neighbourhood" -Method Post -Body $body -ContentType "application/json"
   ```
+- **Example (Linux)**:
+  ```bash
+  curl -X POST -H "Content-Type: application/json" \
+       -d '{"neighbourhood": 1, "factor": 0.8}' \
+       http://localhost:5000/modify_load_neighbourhood
+  ```
 
-### 4. Modify Individual Household Load
+### 3. Modify Individual Household Load
 - **Endpoint**: `POST /modify_load_household`
 - **Description**: Adjusts the load for a specific household
 - **Request Body**:
@@ -162,8 +167,14 @@ We provide a Postman collection (`DEG_APIs.postman_collection`) to help you test
   } | ConvertTo-Json
   Invoke-RestMethod -Uri "http://localhost:5000/modify_load_household" -Method Post -Body $body -ContentType "application/json"
   ```
+- **Example (Linux)**:
+  ```bash
+  curl -X POST -H "Content-Type: application/json" \
+       -d '{"bus_name": "1", "load_name": "Load_1", "new_kw": 5.0, "new_kvar": 1.0}' \
+       http://localhost:5000/modify_load_household
+  ```
 
-### 5. Add Generator
+### 4. Add Generator
 - **Endpoint**: `POST /add_generator`
 - **Description**: Adds a new generator to a bus
 - **Request Body**:
@@ -191,8 +202,82 @@ We provide a Postman collection (`DEG_APIs.postman_collection`) to help you test
   } | ConvertTo-Json
   Invoke-RestMethod -Uri "http://localhost:5000/add_generator" -Method Post -Body $body -ContentType "application/json"
   ```
+- **Example (Linux)**:
+  ```bash
+  curl -X POST -H "Content-Type: application/json" \
+       -d '{"bus_name": "1", "kv": 0.48, "kw": 50.0, "kvar": 10.0, "model": 1, "vmin_pu": 0.9, "vmax_pu": 1.1}' \
+       http://localhost:5000/add_generator
+  ```
 
-### 6. Add Device to Bus
+### 5. Add Storage Device
+- **Endpoint**: `POST /add_storage`
+- **Description**: Adds a new storage device to a bus
+- **Request Body**:
+  ```json
+  {
+    "bus_name": "1",
+    "name": "Battery_1",
+    "kw_rated": 50.0,
+    "kwh_rated": 200.0,
+    "charge_kw": 25.0,
+    "discharge_kw": 25.0,
+    "soc_init": 50.0,
+    "eff_charge": 0.95,
+    "eff_discharge": 0.95,
+    "vmin_pu": 0.9,
+    "vmax_pu": 1.1
+  }
+  ```
+- **Example (PowerShell)**:
+  ```powershell
+  $body = @{
+      bus_name = "1"
+      name = "Battery_1"
+      kw_rated = 50.0
+      kwh_rated = 200.0
+      charge_kw = 25.0
+      discharge_kw = 25.0
+      soc_init = 50.0
+      eff_charge = 0.95
+      eff_discharge = 0.95
+      vmin_pu = 0.9
+      vmax_pu = 1.1
+  } | ConvertTo-Json
+  Invoke-RestMethod -Uri "http://localhost:5000/add_storage" -Method Post -Body $body -ContentType "application/json"
+  ```
+- **Example (Linux)**:
+  ```bash
+  curl -X POST -H "Content-Type: application/json" \
+       -d '{"bus_name": "1", "name": "Battery_1", "kw_rated": 50.0, "kwh_rated": 200.0, "charge_kw": 25.0, "discharge_kw": 25.0, "soc_init": 50.0, "eff_charge": 0.95, "eff_discharge": 0.95, "vmin_pu": 0.9, "vmax_pu": 1.1}' \
+       http://localhost:5000/add_storage
+  ```
+
+### 6. Toggle Storage Device
+- **Endpoint**: `POST /toggle_storage`
+- **Description**: Toggles a storage device between charging, discharging, and idle modes
+- **Request Body**:
+  ```json
+  {
+    "name": "Battery_1",
+    "mode": "charge"  // Can be 'charge', 'discharge', or 'idle'
+  }
+  ```
+- **Example (PowerShell)**:
+  ```powershell
+  $body = @{
+      name = "Battery_1"
+      mode = "charge"
+  } | ConvertTo-Json
+  Invoke-RestMethod -Uri "http://localhost:5000/toggle_storage" -Method Post -Body $body -ContentType "application/json"
+  ```
+- **Example (Linux)**:
+  ```bash
+  curl -X POST -H "Content-Type: application/json" \
+       -d '{"name": "Battery_1", "mode": "charge"}' \
+       http://localhost:5000/toggle_storage
+  ```
+
+### 7. Add Device to Bus
 - **Endpoint**: `POST /add_device`
 - **Description**: Adds a new device to a bus
 - **Request Body**:
@@ -216,257 +301,14 @@ We provide a Postman collection (`DEG_APIs.postman_collection`) to help you test
   } | ConvertTo-Json
   Invoke-RestMethod -Uri "http://localhost:5000/add_device" -Method Post -Body $body -ContentType "application/json"
   ```
-
-### 7. Disconnect Device from Bus
-- **Endpoint**: `POST /disconnect_device`
-- **Description**: Removes a device from a bus
-- **Request Body**:
-  ```json
-  {
-    "bus_name": "1",
-    "device_name": "EV_Charger_1"
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      bus_name = "1"
-      device_name = "EV_Charger_1"
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/disconnect_device" -Method Post -Body $body -ContentType "application/json"
-  ```
-
-## Demand Flexibility Program (DFP) Endpoints
-
-### 8. Register New DFP
-- **Endpoint**: `POST /register_dfp`
-- **Description**: Registers a new Demand Flexibility Program
-- **Request Body**:
-  ```json
-  {
-    "name": "peak_shaving",
-    "min_power_kw": 100.0,
-    "target_pf": 0.95
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      name = "peak_shaving"
-      min_power_kw = 100.0
-      target_pf = 0.95
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/register_dfp" -Method Post -Body $body -ContentType "application/json"
-  ```
-
-### 9. Update DFP Parameters
-- **Endpoint**: `PUT /update_dfp`
-- **Description**: Updates an existing DFP's parameters
-- **Request Body**:
-  ```json
-  {
-    "name": "peak_shaving",
-    "min_power_kw": 120.0,
-    "target_pf": 0.98
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      name = "peak_shaving"
-      min_power_kw = 120.0
-      target_pf = 0.98
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/update_dfp" -Method Put -Body $body -ContentType "application/json"
-  ```
-
-### 10. Delete DFP
-- **Endpoint**: `DELETE /delete_dfp`
-- **Description**: Removes a DFP and cleans up subscriptions
-- **Request Body**:
-  ```json
-  {
-    "name": "peak_shaving"
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      name = "peak_shaving"
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/delete_dfp" -Method Delete -Body $body -ContentType "application/json"
-  ```
-
-### 11. Subscribe Bus to DFP
-- **Endpoint**: `POST /subscribe_dfp`
-- **Description**: Subscribes a bus to a DFP
-- **Request Body**:
-  ```json
-  {
-    "bus_name": "1",
-    "dfp_name": "peak_shaving"
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      bus_name = "1"
-      dfp_name = "peak_shaving"
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/subscribe_dfp" -Method Post -Body $body -ContentType "application/json"
-  ```
-
-### 12. Unsubscribe Bus from DFP
-- **Endpoint**: `POST /unsubscribe_dfp`
-- **Description**: Removes a bus from a DFP
-- **Request Body**:
-  ```json
-  {
-    "bus_name": "1",
-    "dfp_name": "peak_shaving"
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      bus_name = "1"
-      dfp_name = "peak_shaving"
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/unsubscribe_dfp" -Method Post -Body $body -ContentType "application/json"
-  ```
-
-### 13. Modify High-Wattage Devices in Bus
-- **Endpoint**: `POST /modify_devices_in_bus`
-- **Description**: Reduces load for high-wattage devices on a specific bus
-- **Request Body**:
-  ```json
-  {
-    "bus_name": "1",
-    "power_threshold_kw": 5.0,
-    "reduction_factor": 0.7
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      bus_name = "1"
-      power_threshold_kw = 5.0
-      reduction_factor = 0.7
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/modify_devices_in_bus" -Method Post -Body $body -ContentType "application/json"
-  ```
 - **Example (Linux)**:
   ```bash
   curl -X POST -H "Content-Type: application/json" \
-       -d '{"bus_name": "1", "power_threshold_kw": 5.0, "reduction_factor": 0.7}' \
-       http://localhost:5000/modify_devices_in_bus
-  ```
-
-### 14. Execute DFP Rules
-- **Endpoint**: `POST /execute_dfp`
-- **Description**: Executes DFP rules on all subscribed buses
-- **Request Body**:
-  ```json
-  {
-    "dfp_name": "peak_shaving"
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      dfp_name = "peak_shaving"
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/execute_dfp" -Method Post -Body $body -ContentType "application/json"
-  ```
-- **Example (Linux)**:
-  ```bash
-  curl -X POST -H "Content-Type: application/json" \
-       -d '{"dfp_name": "peak_shaving"}' \
-       http://localhost:5000/execute_dfp
-  ```
-
-### 2. Modify Load for a Specific Household
-- **Endpoint**: `POST /modify_load_household`
-- **Description**: Adjusts the load factor for a specific household/bus
-- **Request Body**:
-  ```json
-  {
-    "bus_name": "1",
-    "factor": 0.9
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      bus_name = "1"
-      factor = 0.9
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/modify_load_household" -Method Post -Body $body -ContentType "application/json"
-  ```
-- **Example (Linux)**:
-  ```bash
-  curl -X POST -H "Content-Type: application/json" \
-       -d '{"bus_name": "1", "factor": 0.9}' \
-       http://localhost:5000/modify_load_household
-  ```
-
-### 3. Add Generator to a Bus
-- **Endpoint**: `POST /add_generator`
-- **Description**: Adds a generator to a specified bus
-- **Request Body**:
-  ```json
-  {
-    "bus_name": "1",
-    "kw": 100,
-    "phases": 3
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      bus_name = "1"
-      kw = 100
-      phases = 3
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/add_generator" -Method Post -Body $body -ContentType "application/json"
-  ```
-- **Example (Linux)**:
-  ```bash
-  curl -X POST -H "Content-Type: application/json" \
-       -d '{"bus_name": "1", "kw": 100, "phases": 3}' \
-       http://localhost:5000/add_generator
-  ```
-
-### 4. Add Device to a Bus
-- **Endpoint**: `POST /add_device`
-- **Description**: Adds a load device to a specified bus
-- **Request Body**:
-  ```json
-  {
-    "bus_name": "1",
-    "device_name": "EV_Charger_1",
-    "kw": 7.5,
-    "phases": 1
-  }
-  ```
-- **Example (PowerShell)**:
-  ```powershell
-  $body = @{
-      bus_name = "1"
-      device_name = "EV_Charger_1"
-      kw = 7.5
-      phases = 1
-  } | ConvertTo-Json
-  Invoke-RestMethod -Uri "http://localhost:5000/add_device" -Method Post -Body $body -ContentType "application/json"
-  ```
-- **Example (Linux)**:
-  ```bash
-  curl -X POST -H "Content-Type: application/json" \
-       -d '{"bus_name": "1", "device_name": "EV_Charger_1", "kw": 7.5, "phases": 1}' \
+       -d '{"bus_name": "1", "device_name": "EV_Charger_1", "kw": 7.2, "kvar": 1.4, "pf": 0.98}' \
        http://localhost:5000/add_device
   ```
 
-### 5. Disconnect Device from Bus
+### 8. Disconnect Device from Bus
 - **Endpoint**: `POST /disconnect_device`
 - **Description**: Removes a device from a bus
 - **Request Body**:
@@ -491,9 +333,9 @@ We provide a Postman collection (`DEG_APIs.postman_collection`) to help you test
        http://localhost:5000/disconnect_device
   ```
 
-### 6. DFP Management
+## Demand Flexibility Program (DFP) Endpoints
 
-#### 6.1 Register a New DFP
+### 9. Register New DFP
 - **Endpoint**: `POST /register_dfp`
 - **Description**: Registers a new Demand Flexibility Program
 - **Request Body**:
@@ -520,7 +362,7 @@ We provide a Postman collection (`DEG_APIs.postman_collection`) to help you test
        http://localhost:5000/register_dfp
   ```
 
-#### 6.2 Update DFP Parameters
+### 10. Update DFP Parameters
 - **Endpoint**: `PUT /update_dfp`
 - **Description**: Updates an existing DFP's parameters
 - **Request Body**:
@@ -547,7 +389,7 @@ We provide a Postman collection (`DEG_APIs.postman_collection`) to help you test
        http://localhost:5000/update_dfp
   ```
 
-#### 6.3 Delete a DFP
+### 11. Delete DFP
 - **Endpoint**: `DELETE /delete_dfp`
 - **Description**: Removes a DFP and cleans up subscriptions
 - **Request Body**:
@@ -570,54 +412,104 @@ We provide a Postman collection (`DEG_APIs.postman_collection`) to help you test
        http://localhost:5000/delete_dfp
   ```
 
-#### 6.4 Subscribe Bus to DFP
+### 12. Subscribe Bus to DFP
 - **Endpoint**: `POST /subscribe_dfp`
 - **Description**: Subscribes a bus to a DFP
 - **Request Body**:
   ```json
   {
     "bus_name": "1",
-    "dfp_number": 1
+    "dfp_name": "peak_shaving"
   }
   ```
 - **Example (PowerShell)**:
   ```powershell
   $body = @{
       bus_name = "1"
-      dfp_number = 1
+      dfp_name = "peak_shaving"
   } | ConvertTo-Json
   Invoke-RestMethod -Uri "http://localhost:5000/subscribe_dfp" -Method Post -Body $body -ContentType "application/json"
   ```
 - **Example (Linux)**:
   ```bash
   curl -X POST -H "Content-Type: application/json" \
-       -d '{"bus_name": "1", "dfp_number": 1}' \
+       -d '{"bus_name": "1", "dfp_name": "peak_shaving"}' \
        http://localhost:5000/subscribe_dfp
   ```
 
-#### 6.5 Unsubscribe Bus from DFP
+### 13. Unsubscribe Bus from DFP
 - **Endpoint**: `POST /unsubscribe_dfp`
 - **Description**: Removes a bus from a DFP
 - **Request Body**:
   ```json
   {
     "bus_name": "1",
-    "dfp_number": 1
+    "dfp_name": "peak_shaving"
   }
   ```
 - **Example (PowerShell)**:
   ```powershell
   $body = @{
       bus_name = "1"
-      dfp_number = 1
+      dfp_name = "peak_shaving"
   } | ConvertTo-Json
   Invoke-RestMethod -Uri "http://localhost:5000/unsubscribe_dfp" -Method Post -Body $body -ContentType "application/json"
   ```
 - **Example (Linux)**:
   ```bash
   curl -X POST -H "Content-Type: application/json" \
-       -d '{"bus_name": "1", "dfp_number": 1}' \
+       -d '{"bus_name": "1", "dfp_name": "peak_shaving"}' \
        http://localhost:5000/unsubscribe_dfp
+  ```
+
+### 14. Modify High-Wattage Devices in Bus
+- **Endpoint**: `POST /modify_devices_in_bus`
+- **Description**: Reduces load for high-wattage devices on a specific bus
+- **Request Body**:
+  ```json
+  {
+    "bus_name": "1",
+    "power_threshold_kw": 5.0,
+    "reduction_factor": 0.7
+  }
+  ```
+- **Example (PowerShell)**:
+  ```powershell
+  $body = @{
+      bus_name = "1"
+      power_threshold_kw = 5.0
+      reduction_factor = 0.7
+  } | ConvertTo-Json
+  Invoke-RestMethod -Uri "http://localhost:5000/modify_devices_in_bus" -Method Post -Body $body -ContentType "application/json"
+  ```
+- **Example (Linux)**:
+  ```bash
+  curl -X POST -H "Content-Type: application/json" \
+       -d '{"bus_name": "1", "power_threshold_kw": 5.0, "reduction_factor": 0.7}' \
+       http://localhost:5000/modify_devices_in_bus
+  ```
+
+### 15. Execute DFP Rules
+- **Endpoint**: `POST /execute_dfp`
+- **Description**: Executes DFP rules on all subscribed buses
+- **Request Body**:
+  ```json
+  {
+    "dfp_name": "peak_shaving"
+  }
+  ```
+- **Example (PowerShell)**:
+  ```powershell
+  $body = @{
+      dfp_name = "peak_shaving"
+  } | ConvertTo-Json
+  Invoke-RestMethod -Uri "http://localhost:5000/execute_dfp" -Method Post -Body $body -ContentType "application/json"
+  ```
+- **Example (Linux)**:
+  ```bash
+  curl -X POST -H "Content-Type: application/json" \
+       -d '{"dfp_name": "peak_shaving"}' \
+       http://localhost:5000/execute_dfp
   ```
 
 ## Output Files
