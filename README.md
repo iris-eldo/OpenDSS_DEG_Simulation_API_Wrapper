@@ -524,6 +524,30 @@ The following files are generated in the `results_api` directory:
   - System health alerts
   - Protection device operations
 
+## Project Structure
+
+```
+opendss_testing/
+│
+├── main.py                    # Core OpenDSS circuit management and simulation logic
+├── run_simulator_data.py      # Flask API server and simulation controller
+├── IEEE_123_Bus_G_neighbourhoods.py  # Neighborhood and transformer configurations
+├── requirements.txt           # Python package dependencies
+├── README.md                  # Project documentation (this file)
+│
+├── Test_Systems/              # Contains test feeder models
+│   └── IEEE_123_Bus-G/        # IEEE 123-Bus test feeder (sample model)
+│       ├── Master.DSS         # Master OpenDSS file
+│       └── ...                # Other model files and directories
+│
+└── results_api/               # Directory for simulation results and logs
+    ├── latest_api_results.txt  # Latest simulation results in text format
+    ├── management_log.txt      # Log of all management actions and decisions
+    ├── dfp_registry.txt       # Current DFP configurations and parameters
+    ├── dfps_logs.txt          # Historical log of all DFP-related activities
+    └── critical.txt           # Tracks critical system events and alerts
+```
+
 ## Model Configuration
 
 ### IEEE 123-Bus Model
@@ -562,48 +586,3 @@ To use this system with a different OpenDSS model, you'll need to:
 2. Update the `TRANSFORMER_DATA` dictionary to map pincodes to their respective transformer buses
 3. Ensure your OpenDSS model files are properly configured in the `Test_Systems` directory
 4. Update the main circuit file path in your code if different from the default
-
-## Project Structure
-
-```
-opendss_testing/
-│
-├── main.py                    # Core OpenDSS circuit management and simulation logic
-│   ├── OpenDSSCircuit class   # Main class handling circuit operations
-│   ├── Load management        # Functions for load control and adjustment
-│   ├── Generator control      # Distributed generation management
-│   └── DFP implementation    # Demand Flexibility Program logic
-│
-├── run_simulator_data.py      # Flask API server and simulation controller
-│   ├── API endpoints         # All REST API route handlers
-│   ├── Request validation    # Input validation for API calls
-│   └── Response formatting   # Standardized API responses
-│
-├── Test_Systems/              # Contains test feeder models
-│   └── IEEE_123_Bus-G/        # IEEE 123-Bus test feeder (sample model)
-│       ├── Master.DSS         # Master OpenDSS file
-│       ├── BusCoords.dss      # Bus coordinates
-│       ├── BusVoltageBases.DSS # Voltage base definitions
-│       ├── EnergyMeter.DSS    # Energy meter configurations
-│       ├── Line.DSS           # Line definitions
-│       ├── LineCode.DSS       # Line code definitions
-│       ├── LoadShape.DSS      # Load shape definitions
-│       ├── RegControl.DSS     # Regulator control settings
-│       ├── Spectrum.DSS       # Harmonic spectrum data
-│       ├── TCC_Curve.DSS      # Time-current characteristic curves
-│       ├── Transformer.DSS    # Transformer definitions
-│       ├── Vsource.dss        # Voltage source definitions
-│       └── feeder/            # Additional feeder components
-│           ├── Branches.dss   # Branch definitions
-│           ├── Capacitors.dss # Capacitor banks
-│           ├── Loads.dss      # Load definitions
-│           └── Transformers.dss # Transformer configurations
-│
-└── results_api/               # Directory for simulation results and logs
-    ├── latest_api_results.txt  # Latest simulation results in text format
-    ├── management_log.txt      # Log of all management actions and decisions
-    ├── dfp_registry.txt       # Current DFP configurations and parameters
-    ├── dfps_logs.txt          # Historical log of all DFP-related activities
-    └── critical.txt           # Tracks critical system events and alerts
-
-```
