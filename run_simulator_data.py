@@ -1,4 +1,5 @@
 import os
+import pickle
 import pandas as pd
 from flask import Flask, request, jsonify
 from main import OpenDSSCircuit
@@ -12,9 +13,10 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RESULTS_DIR = os.path.join(BASE_DIR, 'results_api')
 TEST_SYSTEMS_DIR = os.path.join(BASE_DIR, 'Test_Systems')
+CACHE_DIR = os.path.join(BASE_DIR, 'cache')
 os.makedirs(RESULTS_DIR, exist_ok=True)
 os.makedirs(TEST_SYSTEMS_DIR, exist_ok=True)
-
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 # The endpoint for sending critical transformer alerts.
 CRITICAL_API_ENDPOINT = "http://localhost:3000/api/critical"
@@ -277,6 +279,95 @@ def get_node_data_endpoint():
     current_details = run_and_update_state()
     return jsonify({"status": "success", "results": current_details}), 200
 
+# In run_simulator_data.py, REPLACE the old /add_node endpoint with this one.
+@app.route('/add_node', methods=['POST'])
+def add_node_endpoint():
+    """
+    Adds a new physical node (bus) and connects it to the grid with new lines.
+    """
+    data = request.get_json()
+    try:
+        bus_name = str(data['bus_name'])
+        neighborhood_id = int(data['neighborhood_id'])
+        coordinates = data['coordinates']
+        connections = data['connections']
+        load_kw = float(data['load_kw'])
+        load_kvar = float(data.get('load_kvar', 0.0))
+    except (TypeError, KeyError, ValueError) as e:
+        return jsonify({"status": "error", "message": f"Invalid payload. Missing or incorrect parameter. Error: {e}"}), 400
+
+    result = circuit.add_node(bus_name, neighborhood_id, coordinates, connections, load_kw, load_kvar)
+    if result.get("status") != "success":
+        return jsonify(result), 400
+    
+    current_details = run_and_update_state()
+    return jsonify({"status": "success", "message": f"Node '{bus_name}' added. Grid state updated.", "results": current_details}), 200
+
+# In run_simulator_data.py, add these two endpoints after the /add_node endpoint
+
+@app.route('/modify_node', methods=['POST'])
+def modify_node_endpoint():
+    """
+    Modifies the load parameters of an existing dynamically added node.
+    """
+    data = request.get_json()
+    try:
+        bus_name = str(data['bus_name'])
+        load_kw = data.get('load_kw')
+        load_kvar = data.get('load_kvar')
+
+        if load_kw is not None:
+            load_kw = float(load_kw)
+        if load_kvar is not None:
+            load_kvar = float(load_kvar)
+
+    except (TypeError, KeyError, ValueError) as e:
+        return jsonify({"status": "error", "message": f"Invalid payload. 'bus_name' (str) is required. Optional: 'load_kw' (float), 'load_kvar' (float). Error: {e}"}), 400
+
+    result = circuit.modify_node(bus_name, load_kw, load_kvar)
+    if result.get("status") != "success":
+        return jsonify(result), 400
+    
+    current_details = run_and_update_state()
+    return jsonify({"status": "success", "message": f"Node '{bus_name}' modified. Grid state updated.", "results": current_details}), 200
+
+
+@app.route('/delete_node', methods=['POST'])
+def delete_node_endpoint():
+    """
+    Deletes a dynamically added node (bus) and its connections.
+    """
+    data = request.get_json()
+    try:
+        bus_name = str(data['bus_name'])
+    except (TypeError, KeyError, ValueError) as e:
+        return jsonify({"status": "error", "message": f"Invalid payload. 'bus_name' (str) is required. Error: {e}"}), 400
+
+    result = circuit.delete_node(bus_name)
+    if result.get("status") != "success":
+        return jsonify(result), 400
+    
+    current_details = run_and_update_state()
+    return jsonify({"status": "success", "message": f"Node '{bus_name}' deleted. Grid state updated.", "results": current_details}), 200
+
+@app.route('/get_bus_details', methods=['POST'])
+def get_bus_details_endpoint():
+    """
+    Returns all data for a single specified bus from the last simulation run.
+    """
+    data = request.get_json()
+    try:
+        bus_name = str(data['bus_name'])
+    except (TypeError, KeyError, ValueError):
+        return jsonify({"status": "error", "message": "Invalid payload. Required: 'bus_name' (string)."}), 400
+
+    bus_details = circuit.get_single_bus_details(bus_name)
+
+    if not bus_details:
+        return jsonify({"status": "not_found", "message": f"Bus '{bus_name}' not found or has no data."}), 404
+
+    return jsonify({"status": "success", "results": bus_details}), 200
+
 @app.route('/modify_load_neighbourhood', methods=['POST'])
 def modify_load_neighbourhood_endpoint():
     data = request.get_json()
@@ -381,6 +472,10 @@ def toggle_storage_device_endpoint():
     return jsonify({"status": "success", "message": result['message'], "results": current_details}), 200
 
 
+
+
+
+
 # --- DFP Management API Endpoints ---
 
 @app.route('/subscribe_dfp', methods=['POST'])
@@ -420,6 +515,7 @@ def register_dfp_endpoint():
     data = request.get_json()
     try:
         dfp_name = str(data['name'])
+        description = str(data['description'])
         min_power_kw = float(data['min_power_kw'])
         target_pf = float(data['target_pf'])
 
@@ -427,9 +523,9 @@ def register_dfp_endpoint():
             return jsonify({"status": "error", "message": "Target Power Factor must be between 0.0 and 1.0 (exclusive of 0)."}), 400
 
     except (TypeError, KeyError, ValueError) as e:
-        return jsonify({"status": "error", "message": f"Invalid payload. Required: 'name' (str), 'min_power_kw' (float), 'target_pf' (float). Error: {e}"}), 400
+        return jsonify({"status": "error", "message": f"Invalid payload. Required: 'name' (str), 'description' (str), 'min_power_kw' (float), 'target_pf' (float). Error: {e}"}), 400
 
-    registered_dfp = circuit.register_dfp(dfp_name, min_power_kw, target_pf)
+    registered_dfp = circuit.register_dfp(dfp_name, description, min_power_kw, target_pf)
     save_dfp_registry_to_file(circuit, "dfp_registry.txt")
     log_dfp_activity(f"CREATED: DFP '{dfp_name}' registered with details: {registered_dfp}.")
 
@@ -446,14 +542,18 @@ def update_dfp_endpoint():
         name = str(data['name'])
         new_min_power_kw = float(data['min_power_kw'])
         new_target_pf = float(data['target_pf'])
+        new_description = data.get('description') # Optional
+
+        if new_description is not None and not isinstance(new_description, str):
+            raise ValueError("Description, if provided, must be a string.")
 
         if not (0.0 < new_target_pf <= 1.0):
             return jsonify({"status": "error", "message": "Target Power Factor must be between 0.0 and 1.0 (exclusive of 0)."}), 400
 
-    except (TypeError, KeyError, ValueError):
-        return jsonify({"status": "error", "message": "Invalid payload. Required: 'name' (str), 'min_power_kw' (float), 'target_pf' (float)."}), 400
+    except (TypeError, KeyError, ValueError) as e:
+        return jsonify({"status": "error", "message": f"Invalid payload. Required: 'name' (str), 'min_power_kw' (float), 'target_pf' (float). Optional: 'description' (str). Error: {e}"}), 400
 
-    result = circuit.update_dfp(name, new_min_power_kw, new_target_pf)
+    result = circuit.update_dfp(name, new_min_power_kw, new_target_pf, new_description)
 
     if result.get("status") == "success":
         save_dfp_registry_to_file(circuit, "dfp_registry.txt")
@@ -519,10 +619,56 @@ def execute_dfp_endpoint():
 
     return jsonify({
         "status": "success",
+        "dfp_details": result.get('dfp_details'),
         "message": result.get('message'),
         "details": result.get('details'),
         "results": current_details # Return the full updated state
     }), 200
+
+@app.route('/send_dfp_to_neighbourhood', methods=['POST'])
+def send_dfp_to_neighbourhood_endpoint():
+    """Sends a DFP to a neighbourhood, randomly subscribing buses."""
+    data = request.get_json()
+    try:
+        neighbourhood_id = int(data['neighbourhood'])
+        dfp_name = str(data['dfp_name'])
+    except (TypeError, KeyError, ValueError) as e:
+        return jsonify({"status": "error", "message": f"Invalid payload. Required: 'neighbourhood' (int), 'dfp_name' (str). Error: {e}"}), 400
+
+    result = circuit.send_dfp_to_neighbourhood(neighbourhood_id, dfp_name)
+
+    if result.get("status") != "success":
+        return jsonify(result), 404 if "not found" in result.get("message", "") else 400
+
+    # Log the high-level action
+    log_dfp_activity(f"SENT_TO_NEIGHBOURHOOD: {result.get('message')}")
+    
+    # Update state to reflect new subscriptions and return the latest data
+    current_details = run_and_update_state()
+    
+    return jsonify({
+        "status": "success",
+        "message": result.get('message'),
+        "details": result.get('details'),
+        "results": current_details
+    }), 200
+
+@app.route('/get_dfp_details', methods=['GET'])
+def get_dfp_details_endpoint():
+    """Returns the details for all registered DFPs, including subscribed buses."""
+    dfp_details = circuit.get_all_dfp_details()
+    return jsonify({
+        "status": "success",
+        "dfps": dfp_details
+    }), 200
+    
+    
+    
+
+
+
+# --- Handling Zipfile  API Endpoints ---
+
 
 @app.route('/upload_test_system', methods=['POST'])
 def upload_test_system():
@@ -599,6 +745,84 @@ def switch_active_system():
         circuit = OpenDSSCircuit("")
         management_status = circuit.solve_and_manage_loading()
         return jsonify({"status": "error", "message": f"Failed to load circuit '{system_name}'. Error: {e}. Reverted to default."}), 500
+
+
+
+
+
+# --- Cache Saving and Loading  API Endpoints ---
+
+@app.route('/save_cache', methods=['POST'])
+def save_cache_endpoint():
+    """Saves the current state of the circuit object to a cache file."""
+    data = request.get_json()
+    try:
+        filename = str(data['filename'])
+        if not filename.endswith('.cache'):
+            filename += '.cache'
+    except (TypeError, KeyError, ValueError):
+        return jsonify({"status": "error", "message": "Invalid payload. Required: 'filename' (str)."}), 400
+
+    cache_path = os.path.join(CACHE_DIR, secure_filename(filename))
+    
+    try:
+        current_state = circuit.get_state()
+        with open(cache_path, 'wb') as f:
+            pickle.dump(current_state, f)
+        
+        message = f"Successfully saved circuit state to '{filename}'."
+        print(message)
+        return jsonify({"status": "success", "message": message, "path": cache_path}), 200
+    except Exception as e:
+        error_message = f"Failed to save cache to '{filename}'. Error: {e}"
+        print(error_message)
+        return jsonify({"status": "error", "message": error_message}), 500
+
+@app.route('/load_cache', methods=['POST'])
+def load_cache_endpoint():
+    """Loads a circuit state from a cache file."""
+    data = request.get_json()
+    try:
+        filename = str(data['filename'])
+        if not filename.endswith('.cache'):
+            filename += '.cache'
+    except (TypeError, KeyError, ValueError):
+        return jsonify({"status": "error", "message": "Invalid payload. Required: 'filename' (str)."}), 400
+
+    cache_path = os.path.join(CACHE_DIR, secure_filename(filename))
+
+    if not os.path.exists(cache_path):
+        return jsonify({"status": "error", "message": f"Cache file '{filename}' not found."}), 404
+
+    global circuit, management_status
+    try:
+        with open(cache_path, 'rb') as f:
+            loaded_state = pickle.load(f)
+        
+        # Re-initialize the circuit with the base DSS file from the cache
+        base_dss_file = loaded_state.get("dss_file")
+        circuit = OpenDSSCircuit(base_dss_file)
+        
+        # Apply all the saved modifications
+        circuit.set_state(loaded_state)
+        
+        # Run simulation and return the new state
+        current_details = run_and_update_state()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Successfully loaded circuit state from '{filename}'.",
+            "results": current_details
+        }), 200
+
+    except Exception as e:
+        error_message = f"Failed to load cache from '{filename}'. Error: {e}. Reverting to default circuit."
+        print(error_message)
+        # Revert to a safe default state on failure
+        circuit = OpenDSSCircuit("")
+        management_status = circuit.solve_and_manage_loading()
+        return jsonify({"status": "error", "message": error_message}), 500
+
 
 
 if __name__ == '__main__':
