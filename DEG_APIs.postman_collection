@@ -30,13 +30,31 @@
 			"response": []
 		},
 		{
+			"name": "get household details",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"bus_name\": \"901\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:5000/get_bus_details"
+			},
+			"response": []
+		},
+		{
 			"name": "add generator",
 			"request": {
 				"method": "POST",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"bus_name\": \"149\",\r\n  \"phases\": 3,\r\n  \"kw\": 40\r\n}",
+					"raw": "{\r\n  \"bus_name\": \"2\",\r\n  \"phases\": 3,\r\n  \"kw\": 40\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -60,7 +78,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"neighbourhood\": 1,\r\n  \"factor\": 0.6\r\n}"
+					"raw": "{\r\n  \"neighbourhood\": 7,\r\n  \"factor\": 0.1\r\n}"
 				},
 				"url": "http://localhost:5000/modify_load_neighbourhood"
 			},
@@ -103,7 +121,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"device_name\": \"television\",\r\n    \"phases\": 1,\r\n    \"kw\": 50\r\n}",
+					"raw": "{\r\n    \"bus_name\": \"901\",\r\n    \"device_name\": \"television\",\r\n    \"phases\": 1,\r\n    \"kw\": 50\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -111,6 +129,15 @@
 					}
 				},
 				"url": "http://localhost:5000/add_device"
+			},
+			"response": []
+		},
+		{
+			"name": "get dfp details",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:5000/get_dfp_details"
 			},
 			"response": []
 		},
@@ -127,7 +154,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"name\": \"Peak Power Shaving 1\",\r\n    \"min_power_kw\": 40.0,\r\n    \"target_pf\": 0.8\r\n}"
+					"raw": "{\r\n    \"name\": \"Peak Power Shaving 3\",\r\n    \"min_power_kw\": 80.0,\r\n    \"target_pf\": 0.7\r\n}"
 				},
 				"url": "http://localhost:5000/register_dfp"
 			},
@@ -146,9 +173,28 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"dfp_name\": \"Peak Power Shaving 2\"\r\n}"
+					"raw": "{\r\n    \"bus_name\": \"901\",\r\n    \"dfp_name\": \"Peak Power Shaving 3\"\r\n}"
 				},
 				"url": "http://localhost:5000/subscribe_dfp"
+			},
+			"response": []
+		},
+		{
+			"name": "send dfp to neighbourhood",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"neighbourhood\": 1,\r\n  \"dfp_name\": \"Peak Power Shaving 2\"\r\n}"
+				},
+				"url": "http://localhost:5000/send_dfp_to_neighbourhood"
 			},
 			"response": []
 		},
@@ -184,7 +230,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"dfp_name\": \"Peak Power Shaving 2\"\r\n}",
+					"raw": "{\r\n    \"dfp_name\": \"Peak Power Shaving 3\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -335,9 +381,129 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"device_name\": \"MyBattery\",\r\n  \"action\": \"toggle\"\r\n}"
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"device_name\": \"MyBattery\",\r\n    \"action\": \"toggle\"\r\n}\r\n"
 				},
 				"url": "http://localhost:5000/toggle_storage_device"
+			},
+			"response": []
+		},
+		{
+			"name": "upload zip file",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/C:/ProgramData/OpenDSS-G/Test_Systems/IEEE_8500_Bus-G.zip"
+						}
+					]
+				},
+				"url": "http://localhost:5000/upload_test_system"
+			},
+			"response": []
+		},
+		{
+			"name": "switch test tystem",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"system_name\": \"IEEE_123_Bus-G\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:5000/switch_active_system"
+			},
+			"response": []
+		},
+		{
+			"name": "add new household",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"bus_name\": \"901\",\n    \"neighborhood_id\": 7,\n    \"coordinates\": {\n        \"x\": 2400.0,\n        \"y\": 1150.0\n    },\n    \"load_kw\": 100.0,\n    \"load_kvar\": 30.0,\n    \"connections\": [\n        {\n            \"to_bus\": \"39\",\n            \"linecode\": \"1\",\n            \"length\": 0.2\n        },\n        {\n            \"to_bus\": \"40\",\n            \"linecode\": \"1\",\n            \"length\": 0.25\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:5000/add_node"
+			},
+			"response": []
+		},
+		{
+			"name": "save cache",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"filename\": \"my_session_july10\"\r\n}"
+				},
+				"url": "http://localhost:5000/save_cache"
+			},
+			"response": []
+		},
+		{
+			"name": "load cache",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"filename\": \"my_session_july10.cache\"\r\n}"
+				},
+				"url": "http://localhost:5000/load_cache"
+			},
+			"response": []
+		},
+		{
+			"name": "modify household",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"bus_name\": \"901\",\n    \"load_kw\": 75.5,\n    \"load_kvar\": 30.0\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:5000/modify_node"
+			},
+			"response": []
+		},
+		{
+			"name": "delete household",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": "http://localhost:5000/delete_node"
 			},
 			"response": []
 		}
