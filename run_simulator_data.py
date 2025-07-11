@@ -300,8 +300,8 @@ def add_node_endpoint():
     if result.get("status") != "success":
         return jsonify(result), 400
     
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "message": f"Node '{bus_name}' added. Grid state updated.", "results": current_details}), 200
+    run_and_update_state()
+    return jsonify(result), 200
 
 # In run_simulator_data.py, add these two endpoints after the /add_node endpoint
 
@@ -325,11 +325,13 @@ def modify_node_endpoint():
         return jsonify({"status": "error", "message": f"Invalid payload. 'bus_name' (str) is required. Optional: 'load_kw' (float), 'load_kvar' (float). Error: {e}"}), 400
 
     result = circuit.modify_node(bus_name, load_kw, load_kvar)
+    if result.get("status") == "info":
+        return jsonify(result), 200
     if result.get("status") != "success":
         return jsonify(result), 400
     
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "message": f"Node '{bus_name}' modified. Grid state updated.", "results": current_details}), 200
+    run_and_update_state()
+    return jsonify(result), 200
 
 
 @app.route('/delete_node', methods=['POST'])
@@ -347,8 +349,8 @@ def delete_node_endpoint():
     if result.get("status") != "success":
         return jsonify(result), 400
     
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "message": f"Node '{bus_name}' deleted. Grid state updated.", "results": current_details}), 200
+    run_and_update_state()
+    return jsonify(result), 200
 
 @app.route('/get_bus_details', methods=['POST'])
 def get_bus_details_endpoint():
@@ -376,9 +378,12 @@ def modify_load_neighbourhood_endpoint():
     except (TypeError, KeyError, ValueError):
         return jsonify({"status": "error", "message": "Invalid payload."}), 400
 
-    circuit.modify_loads_in_neighborhood(neighbourhood, factor)
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "results": current_details}), 200
+    result = circuit.modify_loads_in_neighborhood(neighbourhood, factor)
+    if result.get("status") == "not_found":
+        return jsonify(result), 404
+
+    run_and_update_state()
+    return jsonify(result), 200
 
 @app.route('/modify_load_household', methods=['POST'])
 def modify_load_household_endpoint():
@@ -389,11 +394,17 @@ def modify_load_household_endpoint():
         return jsonify({"status": "error", "message": "Invalid payload."}), 400
 
     result = circuit.modify_loads_in_houses(bus_name, factor)
-    if result.get("status") != "success":
-         return jsonify(result), 404 if "not found" in result.get("message", "") else 200
+    if result.get("status") == "success":
+        run_and_update_state()
+        return jsonify(result), 200
+    
+    # For non-success cases that are not errors (e.g., info, no_change)
+    if result.get("status") in ["info", "no_change"]:
+        return jsonify(result), 200
+        
+    # For actual errors
+    return jsonify(result), 404 if "not found" in result.get("message", "") else 400
 
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "results": current_details}), 200
 
 @app.route('/add_generator', methods=['POST'])
 def add_generator_endpoint():
@@ -403,9 +414,12 @@ def add_generator_endpoint():
     except (TypeError, KeyError, ValueError):
         return jsonify({"status": "error", "message": "Invalid payload."}), 400
 
-    circuit.add_generation_to_bus(bus_name, kw, phases)
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "results": current_details}), 200
+    result = circuit.add_generation_to_bus(bus_name, kw, phases)
+    if result.get("status") != "success":
+        return jsonify(result), 400
+
+    run_and_update_state()
+    return jsonify(result), 200
 
 @app.route('/add_device', methods=['POST'])
 def add_device_endpoint():
@@ -415,9 +429,12 @@ def add_device_endpoint():
     except (TypeError, KeyError, ValueError):
         return jsonify({"status": "error", "message": "Invalid payload."}), 400
 
-    circuit.add_device_to_bus(bus_name, device_name, kw, phases)
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "results": current_details}), 200
+    result = circuit.add_device_to_bus(bus_name, device_name, kw, phases)
+    if result.get("status") != "success":
+        return jsonify(result), 400
+
+    run_and_update_state()
+    return jsonify(result), 200
 
 @app.route('/disconnect_device', methods=['POST'])
 def disconnect_device_endpoint():
@@ -427,11 +444,12 @@ def disconnect_device_endpoint():
     except (TypeError, KeyError, ValueError):
         return jsonify({"status": "error", "message": "Invalid payload."}), 400
 
-    if not circuit.disconnect_device_from_bus(bus_name, device_name):
-        return jsonify({"status": "not_found", "message": f"Device not found."}), 404
+    result = circuit.disconnect_device_from_bus(bus_name, device_name)
+    if result.get("status") != "success":
+        return jsonify(result), 404
 
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "results": current_details}), 200
+    run_and_update_state()
+    return jsonify(result), 200
 
 # --- Storage Device API Endpoints ---
 
@@ -447,9 +465,12 @@ def add_storage_device_endpoint():
     except (TypeError, KeyError, ValueError) as e:
         return jsonify({"status": "error", "message": f"Invalid payload. Required: bus_name, device_name, max_capacity_kwh, charge_rate_kw, discharge_rate_kw. Error: {e}"}), 400
 
-    circuit.add_storage_device(bus_name, device_name, max_capacity_kwh, charge_rate_kw, discharge_rate_kw)
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "message": f"Storage device '{device_name}' added.", "results": current_details}), 200
+    result = circuit.add_storage_device(bus_name, device_name, max_capacity_kwh, charge_rate_kw, discharge_rate_kw)
+    if result.get("status") != "success":
+        return jsonify(result), 400
+    
+    run_and_update_state()
+    return jsonify(result), 200
 
 @app.route('/toggle_storage_device', methods=['POST'])
 def toggle_storage_device_endpoint():
@@ -468,8 +489,8 @@ def toggle_storage_device_endpoint():
             return jsonify(result), 404
         return jsonify(result), 400
 
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "message": result['message'], "results": current_details}), 200
+    run_and_update_state()
+    return jsonify(result), 200
 
 
 
@@ -491,8 +512,8 @@ def subscribe_dfp_endpoint():
          return jsonify(result), 400
 
     log_dfp_activity(f"SUBSCRIBED: Bus '{bus_name}' to DFP '{dfp_name}'.")
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "message": f"Successfully subscribed bus '{bus_name}' to DFP '{dfp_name}'.", "results": current_details}), 200
+    run_and_update_state()
+    return jsonify({"status": "success", "message": f"Successfully subscribed bus '{bus_name}' to DFP '{dfp_name}'."}), 200
 
 @app.route('/unsubscribe_dfp', methods=['POST'])
 def unsubscribe_dfp_endpoint():
@@ -507,8 +528,8 @@ def unsubscribe_dfp_endpoint():
          return jsonify(result), 400
 
     log_dfp_activity(f"UNSUBSCRIBED: Bus '{bus_name}' from DFP '{dfp_name}'.")
-    current_details = run_and_update_state()
-    return jsonify({"status": "success", "message": f"Successfully unsubscribed bus '{bus_name}' from DFP '{dfp_name}'.", "results": current_details}), 200
+    run_and_update_state()
+    return jsonify({"status": "success", "message": f"Successfully unsubscribed bus '{bus_name}' from DFP '{dfp_name}'."}), 200
 
 @app.route('/register_dfp', methods=['POST'])
 def register_dfp_endpoint():
@@ -575,8 +596,8 @@ def delete_dfp_endpoint():
     if result.get("status") == "success":
         save_dfp_registry_to_file(circuit, "dfp_registry.txt")
         log_dfp_activity(f"DELETED: DFP '{name}'.")
-        current_details = run_and_update_state()
-        return jsonify({"status": "success", "message": f"DFP '{name}' deleted successfully.", "results": current_details}), 200
+        run_and_update_state()
+        return jsonify({"status": "success", "message": f"DFP '{name}' deleted successfully."}), 200
     else:
         return jsonify(result), 404
 
@@ -593,11 +614,11 @@ def modify_devices_in_bus_endpoint():
     except (TypeError, KeyError, ValueError) as e:
         return jsonify({"status": "error", "message": f"Invalid payload. Error: {e}"}), 400
 
-    circuit.modify_high_wattage_devices_in_bus(bus_name, power_threshold_kw, reduction_factor)
-    current_details = run_and_update_state()
+    result = circuit.modify_high_wattage_devices_in_bus(bus_name, power_threshold_kw, reduction_factor)
+    run_and_update_state()
     log_dfp_activity(f"DEVICE_MODIFICATION: on bus '{bus_name}'.")
 
-    return jsonify({"status": "success", "results": current_details}), 200
+    return jsonify(result), 200
 
 @app.route('/execute_dfp', methods=['POST'])
 def execute_dfp_endpoint():
@@ -614,16 +635,14 @@ def execute_dfp_endpoint():
         return jsonify(result), 404 if "not found" in result.get("message", "") else 200
 
     # Re-run simulation to reflect changes from DFP execution
-    current_details = run_and_update_state()
+    run_and_update_state()
     log_dfp_activity(f"EXECUTION: DFP '{dfp_name}' was run. Details: {result.get('details')}")
 
-    return jsonify({
-        "status": "success",
-        "dfp_details": result.get('dfp_details'),
-        "message": result.get('message'),
-        "details": result.get('details'),
-        "results": current_details # Return the full updated state
-    }), 200
+    # Remove internal data from response
+    if 'participation_data' in result:
+        del result['participation_data']
+
+    return jsonify(result), 200
 
 @app.route('/send_dfp_to_neighbourhood', methods=['POST'])
 def send_dfp_to_neighbourhood_endpoint():
@@ -643,15 +662,10 @@ def send_dfp_to_neighbourhood_endpoint():
     # Log the high-level action
     log_dfp_activity(f"SENT_TO_NEIGHBOURHOOD: {result.get('message')}")
     
-    # Update state to reflect new subscriptions and return the latest data
-    current_details = run_and_update_state()
+    # Update state to reflect new subscriptions
+    run_and_update_state()
     
-    return jsonify({
-        "status": "success",
-        "message": result.get('message'),
-        "details": result.get('details'),
-        "results": current_details
-    }), 200
+    return jsonify(result), 200
 
 @app.route('/get_dfp_details', methods=['GET'])
 def get_dfp_details_endpoint():
