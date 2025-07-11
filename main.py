@@ -689,14 +689,44 @@ class OpenDSSCircuit:
             if actual_reduction_amount > 0:
                 self.bus_capacities[bus_name]['gen_kw'] -= actual_reduction_amount
 
-    def modify_loads_in_neighborhood(self, neighborhood_id: int, factor: float):
-        """Modifies loads in a neighborhood, only affecting the net load on each importing bus."""
+    def modify_loads_in_neighborhood(self, neighborhood_id: int, factor: float) -> dict:
+        """Modifies loads in a neighborhood and returns a summary of the changes."""
         buses_in_neighborhood = [b.lower() for b in self.neighborhood_data.get(neighborhood_id, [])]
+        if not buses_in_neighborhood:
+            return {"status": "not_found", "message": f"Neighborhood {neighborhood_id} not found or is empty."}
+        
+        modified_buses = []
+        unmodified_buses = []
+        total_reduction_kw = 0
+
         for bus_name in buses_in_neighborhood:
-            self.modify_loads_in_houses(bus_name, factor)
+            result = self.modify_loads_in_houses(bus_name, factor)
+            if result.get("status") == "success":
+                reduction = result.get("load_reduction_kw", 0)
+                total_reduction_kw += reduction
+                modified_buses.append({"bus_name": bus_name, "load_reduction_kw": reduction})
+            else:
+                unmodified_buses.append({"bus_name": bus_name, "reason": result.get("message")})
+        
+        if not modified_buses:
+             message = f"No loads were modified in neighborhood {neighborhood_id}."
+        else:
+             message = f"Attempted to modify loads in neighborhood {neighborhood_id} with factor {factor}."
+
+        return {
+            "status": "success",
+            "message": message,
+            "details": {
+                "modified_bus_count": len(modified_buses),
+                "unmodified_bus_count": len(unmodified_buses),
+                "total_load_reduction_kw": round(total_reduction_kw, 2),
+                "modified_buses": modified_buses,
+                "unmodified_buses": unmodified_buses
+            }
+        }
 
     def modify_loads_in_houses(self, house_bus_name: str, factor: float, is_auto_reduction: bool = False) -> dict:
-        """Modifies the load on a single bus. If not an auto_reduction, it only affects the net load."""
+        """Modifies the load on a single bus and returns details of the change."""
         bus_name_lower = house_bus_name.lower()
         bus_cap = self.bus_capacities.get(bus_name_lower)
         if not bus_cap or bus_cap['load_kw'] == 0:
@@ -728,7 +758,7 @@ class OpenDSSCircuit:
                 dss.Text.Command(f"edit Load.{load_name} kW={new_kw}")
 
         self.bus_capacities[bus_name_lower]['load_kw'] -= reduction_amount
-        return {"status": "success", "message": "Load modified."}
+        return {"status": "success", "message": f"Load modified on bus {house_bus_name}.", "load_reduction_kw": round(reduction_amount, 2)}
 
     def get_buses_with_loads(self) -> pd.DataFrame:
         """Gets all buses with voltage info, power info from the logical model, and connected elements."""
@@ -863,15 +893,17 @@ class OpenDSSCircuit:
 
         return bus_data
 
-    def add_device_to_bus(self, bus_name: str, device_name: str, kw: float, phases: int):
-        """Adds a new load (device) to the correct transformer secondary bus."""
+    def add_device_to_bus(self, bus_name: str, device_name: str, kw: float, phases: int) -> dict:
+        """Adds a new load (device) to the correct transformer secondary bus and returns confirmation."""
         primary_bus_lower = bus_name.lower()
 
         neighborhood_id = next((nid for nid, buses in self.neighborhood_data.items() if primary_bus_lower in [b.lower() for b in buses]), None)
-        if neighborhood_id is None: return
+        if neighborhood_id is None:
+            return {"status": "error", "message": f"Bus '{primary_bus_lower}' not found in any known neighborhood."}
 
         transformer_primary_bus = self.transformer_data.get(neighborhood_id)
-        if not transformer_primary_bus: return
+        if not transformer_primary_bus:
+            return {"status": "error", "message": f"No transformer mapping for neighborhood {neighborhood_id}."}
         secondary_bus = f"{transformer_primary_bus.lower()}_sec"
 
         if primary_bus_lower not in self.bus_capacities:
@@ -888,13 +920,25 @@ class OpenDSSCircuit:
         self.load_original_bus_map[new_load_name_lower] = primary_bus_lower
         self.original_load_kws[new_load_name_lower] = kw
 
-    def disconnect_device_from_bus(self, bus_name: str, device_name: str) -> bool:
-        """Removes a device from the simulation and updates capacity tracking."""
+        return {
+            "status": "success",
+            "message": f"Device '{device_name}' ({kw} kW) added to bus '{bus_name}'.",
+            "details": {
+                "opendss_load_name": new_load_name,
+                "device_name": device_name,
+                "bus_name": bus_name,
+                "kw": kw
+            }
+        }
+
+    def disconnect_device_from_bus(self, bus_name: str, device_name: str) -> dict:
+        """Removes a device from the simulation and returns a confirmation."""
         primary_bus_lower = bus_name.lower()
 
         device_list = self.devices.get(primary_bus_lower, [])
         device_to_remove = next((d for d in device_list if d.get('device_name') == device_name), None)
-        if not device_to_remove: return False
+        if not device_to_remove:
+            return {"status": "not_found", "message": f"Device '{device_name}' not found on bus '{bus_name}'."}
 
         kw_to_subtract = device_to_remove.get('kw', 0)
 
@@ -914,19 +958,36 @@ class OpenDSSCircuit:
         if load_name_to_remove_lower in self.original_load_kws:
             del self.original_load_kws[load_name_to_remove_lower]
 
-        return True
+        return {
+            "status": "success",
+            "message": f"Device '{device_name}' disconnected from bus '{bus_name}'.",
+            "details": {
+                "device_name": device_name,
+                "bus_name": bus_name,
+                "kw_removed": kw_to_subtract
+            }
+        }
 
-    def add_generation_to_bus(self, bus_name: str, kw: float, phases: int):
-        """Adds a new generator and updates capacity tracking."""
-        print(f"Adding {kw}kW generator to bus {bus_name}.")
-
+    def add_generation_to_bus(self, bus_name: str, kw: float, phases: int) -> dict:
+        """Adds a new generator and returns a confirmation message."""
         bus_name_lower = bus_name.lower()
         gen_name = f"Gen_{bus_name_lower.replace('.', '_')}_{kw:.0f}kW"
+        
         dss.Circuit.SetActiveBus(bus_name_lower)
-        base_kv = dss.Bus.kVBase()
-        if base_kv == 0: return
+        if dss.Circuit.SetActiveBus(bus_name_lower) == 0:
+             return {"status": "error", "message": f"Bus '{bus_name}' not found in the circuit."}
 
-        conn, final_kv = (".1.2.3", base_kv) if phases == 3 else (f".{dss.Bus.Nodes()[0]}", base_kv / 1.732)
+        base_kv = dss.Bus.kVBase()
+        if base_kv == 0:
+            return {"status": "error", "message": f"Bus '{bus_name}' has a base kV of 0. Cannot add generator."}
+
+        nodes = dss.Bus.Nodes()
+        if not nodes:
+            return {"status": "error", "message": f"Bus '{bus_name}' has no nodes."}
+
+        conn = ".1.2.3" if phases == 3 else f".{nodes[0]}"
+        final_kv = base_kv if phases == 3 else base_kv / (3**0.5)
+        
         dss.Text.Command(f'New Generator.{gen_name} Bus1={bus_name_lower}{conn} phases={phases} kV={final_kv:.4f} kW={kw} PF=1.0')
 
         if bus_name_lower not in self.bus_capacities:
@@ -938,38 +999,49 @@ class OpenDSSCircuit:
             'bus_name': bus_name_lower,
         }
 
-    def add_storage_device(self, bus_name: str, device_name: str, max_capacity_kwh: float, charge_rate_kw: float, discharge_rate_kw: float):
-        """Adds a new storage device to the grid with separate charge/discharge rates."""
+        return {
+            "status": "success",
+            "message": f"Generator '{gen_name}' of {kw} kW added to bus '{bus_name}'.",
+            "details": {
+                "generator_name": gen_name,
+                "bus_name": bus_name,
+                "kw": kw,
+                "phases": phases
+            }
+        }
+
+    def add_storage_device(self, bus_name: str, device_name: str, max_capacity_kwh: float, charge_rate_kw: float, discharge_rate_kw: float) -> dict:
+        """Adds a new storage device to the grid and returns a confirmation."""
         primary_bus_lower = bus_name.lower()
         device_name_lower = device_name.lower().replace(' ', '_')
 
         neighborhood_id = next((nid for nid, buses in self.neighborhood_data.items() if primary_bus_lower in [b.lower() for b in buses]), None)
         if neighborhood_id is None:
-            print(f"Error: Bus '{bus_name}' not found in any neighborhood.")
-            return
+            return {"status": "error", "message": f"Bus '{bus_name}' not found in any neighborhood."}
+        
         transformer_primary_bus = self.transformer_data.get(neighborhood_id)
         if not transformer_primary_bus:
-            print(f"Error: No transformer mapping for neighborhood {neighborhood_id}.")
-            return
+            return {"status": "error", "message": f"No transformer mapping for neighborhood {neighborhood_id}."}
         secondary_bus = f"{transformer_primary_bus.lower()}_sec"
 
         load_name = f"stor_load_{device_name_lower}"
         gen_name = f"stor_gen_{device_name_lower}"
 
-        self.storage_devices[device_name_lower] = {
+        device_details = {
             'bus_name': primary_bus_lower,
             'max_capacity_kwh': max_capacity_kwh,
             'current_energy_kwh': 0.0,
             'build_charge_rate': charge_rate_kw,
             'build_discharge_rate': discharge_rate_kw,
-            'actual_charge_rate': charge_rate_kw, # Starts at build rate
-            'actual_discharge_rate': 0, # Starts inactive
+            'actual_charge_rate': charge_rate_kw,
+            'actual_discharge_rate': 0,
             'mode': 'load',
             'active': True,
             'last_update_time': time.time(),
             'opendss_load_name': load_name,
             'opendss_gen_name': gen_name,
         }
+        self.storage_devices[device_name_lower] = device_details
 
         dss.Text.Command(f"New Load.{load_name} Bus1={secondary_bus} phases=1 conn=wye kV=0.24 kW={charge_rate_kw} model=1")
         dss.Text.Command(f"New Generator.{gen_name} Bus1={secondary_bus} phases=1 kV=0.24 kW={discharge_rate_kw} PF=1.0 enabled=no")
@@ -978,7 +1050,13 @@ class OpenDSSCircuit:
             self.bus_capacities[primary_bus_lower] = {'load_kw': 0, 'gen_kw': 0}
         self.bus_capacities[primary_bus_lower]['load_kw'] += charge_rate_kw
         
-        print(f"Storage device '{device_name}' added to bus '{bus_name}' in load mode.")
+        message = f"Storage device '{device_name}' added to bus '{bus_name}' in load mode."
+        return {
+            "status": "success",
+            "message": message,
+            "details": device_details
+        }
+
 
     def _disconnect_storage_device(self, device_name: str) -> dict:
         """NEW: Disconnects a storage device entirely from the simulation."""
