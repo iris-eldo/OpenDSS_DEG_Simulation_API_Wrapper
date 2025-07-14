@@ -30,20 +30,20 @@
 			"response": []
 		},
 		{
-			"name": "get household details",
+			"name": "get node details",
 			"request": {
 				"method": "POST",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"bus_name\": \"901\"\n}",
+					"raw": "{\n    \"bus_name\": \"1\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
 						}
 					}
 				},
-				"url": "http://localhost:5000/get_bus_details"
+				"url": "http://localhost:5000/get_node_details"
 			},
 			"response": []
 		},
@@ -54,7 +54,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"bus_name\": \"2\",\r\n  \"phases\": 3,\r\n  \"kw\": 40\r\n}",
+					"raw": "{\r\n  \"bus_name\": \"1\",\r\n  \"phases\": 3,\r\n  \"kw\": 40\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -78,14 +78,14 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"neighbourhood\": 7,\r\n  \"factor\": 0.1\r\n}"
+					"raw": "{\r\n  \"neighbourhood\": 1,\r\n  \"factor\": 0.1\r\n}"
 				},
 				"url": "http://localhost:5000/modify_load_neighbourhood"
 			},
 			"response": []
 		},
 		{
-			"name": "modify load household",
+			"name": "modify load in node",
 			"request": {
 				"method": "POST",
 				"header": [
@@ -97,14 +97,14 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"factor\": 0.9\r\n}",
+					"raw": "{\r\n    \"bus_name\": \"2\",\r\n    \"factor\": 0.9\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
 						}
 					}
 				},
-				"url": "http://localhost:5000/modify_load_household"
+				"url": "http://localhost:5000/modify_load_node"
 			},
 			"response": []
 		},
@@ -121,7 +121,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"bus_name\": \"901\",\r\n    \"device_name\": \"television\",\r\n    \"phases\": 1,\r\n    \"kw\": 50\r\n}",
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"device_name\": \"television\",\r\n    \"phases\": 1,\r\n    \"kw\": 50\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -154,7 +154,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"name\": \"Peak Power Shaving 3\",\r\n    \"min_power_kw\": 80.0,\r\n    \"target_pf\": 0.7\r\n}"
+					"raw": "{\r\n    \"name\": \"Peak Power Shaving 3\",\r\n    \"description\": \"lskdfjls\",\r\n    \"min_power_kw\": 80.0,\r\n    \"target_pf\": 0.7\r\n}"
 				},
 				"url": "http://localhost:5000/register_dfp"
 			},
@@ -173,7 +173,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"bus_name\": \"901\",\r\n    \"dfp_name\": \"Peak Power Shaving 3\"\r\n}"
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"dfp_name\": \"Peak Power Shaving 3\"\r\n}"
 				},
 				"url": "http://localhost:5000/subscribe_dfp"
 			},
@@ -192,7 +192,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"neighbourhood\": 1,\r\n  \"dfp_name\": \"Peak Power Shaving 2\"\r\n}"
+					"raw": "{\r\n  \"neighbourhood\": 1,\r\n  \"dfp_name\": \"Peak Power Shaving 3\"\r\n}"
 				},
 				"url": "http://localhost:5000/send_dfp_to_neighbourhood"
 			},
@@ -211,7 +211,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"name\": \"Peak Power Shaving 2\",\r\n    \"min_power_kw\": 12.0,\r\n    \"target_pf\": 0.8\r\n}"
+					"raw": "{\r\n    \"name\": \"Peak Power Shaving 3\",\r\n    \"description\": \"7777\",\r\n    \"min_power_kw\": 12.0,\r\n    \"target_pf\": 0.8\r\n}"
 				},
 				"url": "http://localhost:5000/update_dfp"
 			},
@@ -254,7 +254,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"dfp_name\": \"Peak Power Shaving 2\"\r\n}"
+					"raw": "{\r\n    \"bus_name\": \"1\",\r\n    \"dfp_name\": \"Peak Power Shaving 3\"\r\n}"
 				},
 				"url": "http://localhost:5000/unsubscribe_dfp"
 			},
@@ -273,7 +273,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"name\": \"Peak Power Shaving 1\"\r\n}"
+					"raw": "{\r\n    \"name\": \"Peak Power Shaving 3\"\r\n}"
 				},
 				"url": "http://localhost:5000/delete_dfp"
 			},
@@ -299,7 +299,7 @@
 						}
 					}
 				},
-				"url": "http://localhost:5000/modify_devices_in_bus"
+				"url": "http://localhost:5000/modify_devices_in_node"
 			},
 			"response": []
 		},
@@ -413,7 +413,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"system_name\": \"IEEE_123_Bus-G\"\r\n}",
+					"raw": "{\r\n    \"system_name\": \"IEEE_8500_Bus-G\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -425,7 +425,7 @@
 			"response": []
 		},
 		{
-			"name": "add new household",
+			"name": "add new node",
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -481,7 +481,7 @@
 			"response": []
 		},
 		{
-			"name": "modify household",
+			"name": "modify node",
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -499,10 +499,25 @@
 			"response": []
 		},
 		{
-			"name": "delete household",
+			"name": "delete node",
 			"request": {
 				"method": "POST",
-				"header": [],
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"bus_name\": \"901\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
 				"url": "http://localhost:5000/delete_node"
 			},
 			"response": []
