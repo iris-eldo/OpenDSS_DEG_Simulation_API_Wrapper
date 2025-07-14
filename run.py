@@ -11,6 +11,7 @@ from utils import (
     get_current_state_details, 
     save_management_log_to_file, 
     save_state_to_file,
+    save_critical_transformers_report,
     save_dfp_registry_to_file,
     log_dfp_activity,
     check_and_report_critical_transformers
@@ -49,6 +50,8 @@ def run_and_update_state():
 
     current_details = get_current_state_details(current_circuit, sim_status)
     save_state_to_file(current_details, "latest_api_results.txt", RESULTS_DIR)
+    # Add the call to generate critical.txt
+    save_critical_transformers_report(current_details, "critical.txt", RESULTS_DIR)
     check_and_report_critical_transformers(current_details, RESULTS_DIR, CRITICAL_API_ENDPOINT)
     
     return current_details
