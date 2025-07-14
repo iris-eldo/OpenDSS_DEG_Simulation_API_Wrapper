@@ -382,9 +382,19 @@ class OpenDSSCircuit:
             powers = dss.CktElement.Powers()
             current_kva = (powers[0]**2 + powers[1]**2)**0.5
             loading_percent = (current_kva / rated_kva) * 100 if rated_kva > 0 else 0
+
+            # Determine the transformer's status based on its loading percentage
+            status = "OK"
+            if loading_percent > 100:
+                status = "Overloaded"
+            elif loading_percent > 90:
+                status = "Critical"
+            elif loading_percent > 80:
+                status = "Warning"
+
             self.transformer_statuses[name] = {
                 "name": name, "rated_kVA": rated_kva, "current_kVA": round(current_kva, 2),
-                "loading_percent": round(loading_percent, 2), "status": "Overloaded" if loading_percent > 100 else "OK"
+                "loading_percent": round(loading_percent, 2), "status": status
             }
             if not dss.Transformers.Next() > 0: break
 
@@ -988,7 +998,16 @@ class OpenDSSCircuit:
         conn = ".1.2.3" if phases == 3 else f".{nodes[0]}"
         final_kv = base_kv if phases == 3 else base_kv / (3**0.5)
         
-        dss.Text.Command(f'New Generator.{gen_name} Bus1={bus_name_lower}{conn} phases={phases} kV={final_kv:.4f} kW={kw} PF=1.0')
+        # --- Start of Change ---
+        # Create the command string first
+        cmd = f'New Generator.{gen_name} Bus1={bus_name_lower}{conn} phases={phases} kV={final_kv:.4f} kW={kw} PF=1.0'
+        
+        # Execute the command
+        dss.Text.Command(cmd)
+
+        # Append the command to the dynamic commands list to be saved in the cache
+        self.dynamic_commands.append(cmd)
+        # --- End of Change ---
 
         if bus_name_lower not in self.bus_capacities:
             self.bus_capacities[bus_name_lower] = {'load_kw': 0, 'gen_kw': 0}
