@@ -11,7 +11,7 @@ opendss_testing2/
 │   ├── user_routes.py       # User management endpoints
 │   └── utility_routes.py    # Utility functions and endpoints
 ├── results_api/             # Simulation results and logs
-│   └── critical.txt         # Critical system events and alerts
+│   └── multiple txt log files
 ├── DEG_APIs.postman_collection  # Postman collection for API testing
 ├── main.py                  # Main application entry point
 ├── run.py                   # Application runner
