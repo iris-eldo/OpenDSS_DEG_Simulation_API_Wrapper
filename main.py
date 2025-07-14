@@ -6,8 +6,10 @@ import os
 
 from IEEE_123_Bus_G_neighbourhoods import *
 
+
 # This factor makes generation curtailment more aggressive to stabilize the system faster.
 AGGRESSION_FACTOR = 1.25
+CRITICAL_API_ENDPOINT = "http://localhost:3000/api/critical"
 
 class OpenDSSCircuit:
     """
