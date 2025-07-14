@@ -1,6 +1,25 @@
 import os
-import sys
-from flask import Flask
+import pickle
+import pandas as pd
+from flask import Flask, request, jsonify
+from main import OpenDSSCircuit
+import time
+import requests
+import zipfile
+from werkzeug.utils import secure_filename
+from flask_cors import CORS
+
+
+# --- Global Application Setup ---
+app = Flask(__name__)
+CORS(app, origins=["http://localhost:3000", "http://localhost:3001"])  # Allow CORS for multiple frontends
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RESULTS_DIR = os.path.join(BASE_DIR, 'results_api')
+TEST_SYSTEMS_DIR = os.path.join(BASE_DIR, 'Test_Systems')
+CACHE_DIR = os.path.join(BASE_DIR, 'cache')
+os.makedirs(RESULTS_DIR, exist_ok=True)
+os.makedirs(TEST_SYSTEMS_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 # Add the project's root directory to the Python path for correct imports
 project_root = os.path.dirname(os.path.abspath(__file__))
