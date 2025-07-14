@@ -1,6 +1,13 @@
-opendssdirect.py>=0.10.0
+opendssdirect.py>=0.9.0
 pandas>=1.3.0
 Flask>=2.0.0
 numpy>=1.21.0
 python-dateutil>=2.8.0
 requests>=2.25.0
+flask_cors>=3.0.0
+
+
+
+
+
+
