@@ -225,15 +225,31 @@ def log_dfp_activity(message: str, results_dir: str):
     print(f"DFP activity logged: {message}")
 
 def check_and_report_critical_transformers(state_details: dict, results_dir: str, critical_api_endpoint: str):
-    node_list = state_details.get('node_details', [])
-    if not node_list: return
-    critical_nodes = [
-        {"node": node_info.get('Node'), "critical_transformers": [{"name": xfmr.get('name'), "loading_percent": xfmr.get('loading_percent')} for xfmr in node_info.get('Transformers', []) if xfmr and xfmr.get('loading_percent', 0) > 80]}
-        for node_info in node_list if any(xfmr.get('loading_percent', 0) > 80 for xfmr in node_info.get('Transformers', []))
-    ]
-    if not critical_nodes: return
+    """
+    Checks for transformers with a status other than 'OK' and sends their details to a specified API endpoint.
+    """
+    bus_list = state_details.get('bus_details', [])
+    if not bus_list:
+        return
+
+    # Collect all transformers whose status is not "OK"
+    non_ok_transformers = []
+    for bus_info in bus_list:
+        for transformer in bus_info.get('Transformers', []):
+            if transformer and transformer.get('status') != 'OK':
+                # Add the bus name to the transformer's details for context
+                report_details = transformer.copy()
+                report_details['bus'] = bus_info.get('Bus')
+                non_ok_transformers.append(report_details)
+
+    # If there are any non-OK transformers, send the alert
+    if not non_ok_transformers:
+        return
+
     try:
-        requests.post(critical_api_endpoint, json=critical_nodes, timeout=5).raise_for_status()
-        print(f"Successfully sent critical alert to {critical_api_endpoint}.")
+        # The payload is the list of all transformers that are not in an "OK" state
+        response = requests.post(critical_api_endpoint, json=non_ok_transformers, timeout=5)
+        response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+        print(f"Successfully sent details of {len(non_ok_transformers)} non-OK transformers to {critical_api_endpoint}.")
     except requests.exceptions.RequestException as e:
-        print(f"Error sending critical alert: {e}")
+        print(f"Error sending critical transformer alert to {critical_api_endpoint}: {e}")
