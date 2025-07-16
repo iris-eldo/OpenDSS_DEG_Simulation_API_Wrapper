@@ -60,11 +60,32 @@ def create_utility_blueprint(circuit_ref, run_and_update_state, log_dfp_activity
     @utility_bp.route('/execute_dfp', methods=['POST'])
     def execute_dfp_endpoint():
         data = request.get_json()
-        result = circuit_ref['instance'].execute_dfp(str(data['dfp_name']))
-        run_and_update_state()
-        log_dfp_activity(f"EXECUTION: DFP '{data['dfp_name']}'.", results_dir)
+        dfp_name = str(data['dfp_name'])
+        # Get the optional 'neighbourhood' parameter, defaulting to None if not present
+        neighbourhood_id = data.get('neighbourhood')
+
+        # Ensure neighbourhood_id is an integer if it exists
+        if neighbourhood_id is not None:
+            try:
+                neighbourhood_id = int(neighbourhood_id)
+            except (ValueError, TypeError):
+                return jsonify({"status": "error", "message": "The 'neighbourhood' parameter must be an integer."}), 400
+
+        result = circuit_ref['instance'].execute_dfp(dfp_name, neighbourhood_id)
+
+        # Only run the full simulation and update state if the action was successful or informational
+        if result.get("status") in ["success", "info"]:
+            run_and_update_state()
+            log_message = f"EXECUTION: DFP '{dfp_name}'"
+            if neighbourhood_id is not None:
+                log_message += f" for neighbourhood {neighbourhood_id}."
+            else:
+                log_message += "."
+            log_dfp_activity(log_message, results_dir)
+
         if 'participation_data' in result:
             del result['participation_data']
+
         return jsonify(result), 200
 
     # API 11: delete dfp
