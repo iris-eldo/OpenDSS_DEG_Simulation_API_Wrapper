@@ -1312,10 +1312,11 @@ class OpenDSSCircuit:
             }
 
 
-    def execute_dfp(self, dfp_name: str) -> dict:
+    def execute_dfp(self, dfp_name: str, neighborhood_id: int = None) -> dict:
         """
         Finds all buses subscribed to a DFP, executes its rules,
         and returns the participation status for each bus.
+        If a neighborhood_id is provided, it only executes on subscribed buses within that neighborhood.
         """
         target_dfp = next((dfp for dfp in self.dfps if dfp['name'].lower() == dfp_name.lower()), None)
         if not target_dfp:
@@ -1325,18 +1326,35 @@ class OpenDSSCircuit:
         power_threshold_kw = target_dfp['min_power_kw']
         reduction_factor = target_dfp['target_pf']
 
-        subscribed_buses = [
+        # Get all buses subscribed to the DFP
+        all_subscribed_buses = [
             bus_name for bus_name, subs in self.bus_dfps.items()
             if len(subs) >= dfp_index and subs[dfp_index - 1] == 1
         ]
 
-        if not subscribed_buses:
+        # Filter by neighborhood if specified
+        if neighborhood_id is not None:
+            if neighborhood_id not in self.neighborhood_data:
+                return {"status": "error", "message": f"Neighborhood with ID '{neighborhood_id}' not found."}
+
+            buses_in_neighborhood = {b.lower() for b in self.neighborhood_data[neighborhood_id]}
+            # Find the intersection of subscribed buses and buses in the specified neighborhood
+            target_buses = [bus for bus in all_subscribed_buses if bus.lower() in buses_in_neighborhood]
+
+            if not target_buses:
+                 return {"status": "info", "message": f"No buses in neighborhood {neighborhood_id} are subscribed to DFP '{dfp_name}'."}
+
+        else:
+            # If no neighborhood is specified, target all subscribed buses
+            target_buses = all_subscribed_buses
+
+        if not target_buses:
             return {"status": "info", "message": f"No buses are subscribed to DFP '{dfp_name}'."}
 
         log_summary = []
         participation_data = []
 
-        for bus_name in subscribed_buses:
+        for bus_name in target_buses:
             did_participate = random.choice([True, False])
             participation_data.append({'bus_name': bus_name, 'participated': did_participate})
 
@@ -1346,10 +1364,15 @@ class OpenDSSCircuit:
             else:
                 log_summary.append(f"Bus '{bus_name}': Chose not to participate")
 
+        exec_message = f"Executed DFP '{dfp_name}' on {len(target_buses)} bus(es)."
+        if neighborhood_id is not None:
+            exec_message += f" within neighbourhood {neighborhood_id}."
+
+
         return {
             "status": "success",
             "dfp_details": target_dfp,
-            "message": f"Executed DFP '{dfp_name}' on {len(subscribed_buses)} bus(es).",
+            "message": exec_message,
             "details": log_summary,
             "participation_data": participation_data
         }
