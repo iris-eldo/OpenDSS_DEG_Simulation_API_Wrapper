@@ -145,5 +145,53 @@ def create_utility_blueprint(circuit_ref, run_and_update_state, log_dfp_activity
         log_dfp_activity(result.get('message'), results_dir)
         run_and_update_state()
         return jsonify(result), 200
+        
+    # API 25: stop dfp
+    @utility_bp.route('/stop_dfp', methods=['POST'])
+    def stop_dfp_endpoint():
+        data = request.get_json()
+        
+        # Validate required parameter
+        if 'dfp_name' not in data:
+            return jsonify({"status": "error", "message": "Missing required parameter 'dfp_name'"}), 400
+            
+        dfp_name = str(data['dfp_name'])
+        
+        # Get the optional 'neighbourhood' parameter, defaulting to None if not present
+        neighbourhood_id = data.get('neighbourhood')
+        
+        # Ensure neighbourhood_id is an integer if it exists
+        if neighbourhood_id is not None:
+            try:
+                neighbourhood_id = int(neighbourhood_id)
+            except (ValueError, TypeError):
+                return jsonify({"status": "error", "message": "The 'neighbourhood' parameter must be an integer."}), 400
+        
+        try:
+            # Call the stop_dfp method
+            result = circuit_ref['instance'].stop_dfp(dfp_name, neighbourhood_id)
+            
+            # If the operation was successful, log the activity and update the state
+            if result.get("status") == "success":
+                # Create a detailed log message
+                log_message = f"STOPPED: DFP '{dfp_name}'"
+                if neighbourhood_id is not None:
+                    log_message += f" in neighborhood {neighbourhood_id}"
+                log_message += f". {result.get('restored_devices_count', 0)} device(s) had their loads restored."
+                
+                # Log the activity
+                log_dfp_activity(log_message, results_dir)
+                
+                # Update the system state
+                run_and_update_state()
+                
+                # Add more details to the response
+                result['log_message'] = log_message
+                
+            return jsonify(result), 200 if result.get("status") == "success" else 400
+            
+        except Exception as e:
+            error_msg = f"Error stopping DFP '{dfp_name}': {str(e)}"
+            return jsonify({"status": "error", "message": error_msg}), 500
 
     return utility_bp
