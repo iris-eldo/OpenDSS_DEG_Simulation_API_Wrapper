@@ -230,7 +230,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"dfp_name\": \"Peak Power Shaving 3\"\r\n}",
+					"raw": "{\r\n    \"dfp_name\": \"Peak Power Shaving 3\",\r\n    \"neighbourhood\": 4\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -238,6 +238,25 @@
 					}
 				},
 				"url": "http://localhost:5000/execute_dfp"
+			},
+			"response": []
+		},
+		{
+			"name": "stop dfp execution",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"dfp_name\": \"peak_shaving\",\r\n    \"neighbourhood\": 1\r\n}"
+				},
+				"url": "http://localhost:5000/stop_dfp"
 			},
 			"response": []
 		},
