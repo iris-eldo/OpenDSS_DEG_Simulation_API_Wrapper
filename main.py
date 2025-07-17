@@ -61,35 +61,84 @@ class OpenDSSCircuit:
 
     def _inventory_capacities_and_map_loads(self):
         """
-        Scans all loads and generators on the original circuit to populate the
-        internal capacity tracking and create a map of loads to their original buses.
+        Scans all loads and generators on the original circuit. Converts original loads
+        to "devices" for easier management, inventories capacities, and maps elements.
         """
         print("Inventorying original bus capacities and mapping loads...")
         self.bus_capacities = {}
         self.load_original_bus_map = {}
         self.original_load_kws = {}
         self.generator_states = {}
+        
+        # --- Start of Change ---
+        # Dictionary to count pre-existing loads on each bus for unique naming
+        pre_load_counters = {}
+        # --- End of Change ---
 
         # Store bus coordinates from the simulation file
         for bus_name in dss.Circuit.AllBusNames():
             dss.Circuit.SetActiveBus(bus_name)
             self.bus_coords[bus_name.lower()] = {'X': dss.Bus.X(), 'Y': dss.Bus.Y()}
 
+        # First, gather all existing loads to avoid modifying while iterating
+        loads_to_process = []
         if dss.Loads.Count() > 0:
             dss.Loads.First()
             while True:
                 load_name = dss.Loads.Name()
-                bus_name = dss.CktElement.BusNames()[0].split('.')[0].lower()
-                kw = dss.Loads.kW()
-
-                self.load_original_bus_map[load_name.lower()] = bus_name
-                self.original_load_kws[load_name.lower()] = kw
-
-                if bus_name not in self.bus_capacities:
-                    self.bus_capacities[bus_name] = {'load_kw': 0, 'gen_kw': 0}
-                self.bus_capacities[bus_name]['load_kw'] += kw
-
+                dss.Circuit.SetActiveElement(f"Load.{load_name}")
+                
+                loads_to_process.append({
+                    "name": load_name,
+                    "bus_full": dss.CktElement.BusNames()[0], # e.g., "busname.1.2.3"
+                    "bus_simple": dss.CktElement.BusNames()[0].split('.')[0].lower(),
+                    "kw": dss.Loads.kW(),
+                    "kvar": dss.Loads.kvar(),
+                    "kv": dss.Loads.kV(),
+                    "phases": dss.CktElement.NumPhases(),
+                    "conn": "wye" if dss.Loads.IsDelta() else "delta" 
+                })
                 if not dss.Loads.Next() > 0: break
+        
+        # Now, process the gathered loads
+        for load_info in loads_to_process:
+            bus_name = load_info['bus_simple']
+            kw = load_info['kw']
+
+            # --- Start of Change ---
+            # Increment a counter for the bus to create a unique device name like "pre_load_76_1"
+            current_count = pre_load_counters.get(bus_name, 0) + 1
+            pre_load_counters[bus_name] = current_count
+            device_name = f"pre_load_{bus_name}_{current_count}"
+            # --- End of Change ---
+            
+            new_load_name = f"dev_{device_name}"
+
+            # Create the new load object with the same properties as the old one
+            dss.Text.Command(
+                f"New Load.{new_load_name} "
+                f"Bus1={load_info['bus_full']} "
+                f"phases={load_info['phases']} "
+                f"conn={load_info['conn']} "
+                f"kV={load_info['kv']} "
+                f"kW={kw} "
+                f"kvar={load_info['kvar']} "
+                f"model=1"
+            )
+            
+            # Disable the original load, it's now replaced
+            dss.Text.Command(f"disable Load.{load_info['name']}")
+
+            # Update internal tracking structures for the new device
+            if bus_name not in self.devices: self.devices[bus_name] = []
+            self.devices[bus_name].append({'device_name': device_name, 'kw': kw})
+            
+            self.load_original_bus_map[new_load_name.lower()] = bus_name
+            self.original_load_kws[new_load_name.lower()] = kw
+
+            if bus_name not in self.bus_capacities:
+                self.bus_capacities[bus_name] = {'load_kw': 0, 'gen_kw': 0}
+            self.bus_capacities[bus_name]['load_kw'] += kw
 
         if dss.Generators.Count() > 0:
             dss.Generators.First()
@@ -105,7 +154,7 @@ class OpenDSSCircuit:
                     'bus_name': bus_name,
                 }
                 if not dss.Generators.Next() > 0: break
-        print("Initial bus capacities inventoried.")
+        print("Initial bus capacities inventoried and pre-existing loads converted to devices.")
 
 
     def _add_neighborhood_transformers_and_rewire_loads(self):
@@ -910,6 +959,11 @@ class OpenDSSCircuit:
         """Adds a new load (device) to the correct transformer secondary bus and returns confirmation."""
         primary_bus_lower = bus_name.lower()
 
+        # Check if a device with the same name already exists on this bus
+        existing_devices = self.devices.get(primary_bus_lower, [])
+        if any(d.get('device_name') == device_name for d in existing_devices):
+            return {"status": "error", "message": f"Device with name '{device_name}' already exists at node (bus) '{bus_name}'."}
+
         neighborhood_id = next((nid for nid, buses in self.neighborhood_data.items() if primary_bus_lower in [b.lower() for b in buses]), None)
         if neighborhood_id is None:
             return {"status": "error", "message": f"Bus '{primary_bus_lower}' not found in any known neighborhood."}
@@ -926,7 +980,11 @@ class OpenDSSCircuit:
         if primary_bus_lower not in self.devices: self.devices[primary_bus_lower] = []
         self.devices[primary_bus_lower].append({'device_name': device_name, 'kw': kw})
 
-        new_load_name = f"dev_{device_name.replace(' ', '_')}"
+        # --- Start of Change ---
+        # Create a globally unique name for the OpenDSS Load element by including the bus name.
+        new_load_name = f"dev_{primary_bus_lower}_{device_name.replace(' ', '_')}"
+        # --- End of Change ---
+        
         dss.Text.Command(f"New Load.{new_load_name} Bus1={secondary_bus} phases=1 conn=wye kV=0.24 kW={kw} model=1")
 
         new_load_name_lower = new_load_name.lower()
@@ -960,9 +1018,13 @@ class OpenDSSCircuit:
 
         self.devices[primary_bus_lower] = [d for d in device_list if d.get('device_name') != device_name]
 
-        load_name_to_remove = f"dev_{device_name.replace(' ', '_')}"
+        # --- Start of Change ---
+        # Construct the correct, globally unique OpenDSS element name to remove.
+        load_name_to_remove = f"dev_{primary_bus_lower}_{device_name.replace(' ', '_')}"
+        # --- End of Change ---
+
         dss.Loads.Name(load_name_to_remove)
-        if dss.Loads.Name().lower() == load_name_to_remove:
+        if dss.Loads.Name().lower() == load_name_to_remove.lower():
             dss.Text.Command(f"disable Load.{load_name_to_remove}")
 
         load_name_to_remove_lower = load_name_to_remove.lower()
@@ -1037,6 +1099,19 @@ class OpenDSSCircuit:
         primary_bus_lower = bus_name.lower()
         device_name_lower = device_name.lower().replace(' ', '_')
 
+        # --- Start of Change ---
+        # Check if a storage device with the same name already exists on this bus
+        for device in self.storage_devices.values():
+            if device.get('bus_name') == primary_bus_lower and device.get('device_name') == device_name:
+                 return {"status": "error", "message": f"Storage device with name '{device_name}' already exists at node (bus) '{bus_name}'."}
+
+        # Use a composite key for the dictionary to ensure uniqueness per bus
+        unique_key = f"{primary_bus_lower}::{device_name_lower}"
+        # Use bus and device name in OpenDSS element to ensure global uniqueness
+        load_name = f"stor_load_{primary_bus_lower}_{device_name_lower}"
+        gen_name = f"stor_gen_{primary_bus_lower}_{device_name_lower}"
+        # --- End of Change ---
+
         neighborhood_id = next((nid for nid, buses in self.neighborhood_data.items() if primary_bus_lower in [b.lower() for b in buses]), None)
         if neighborhood_id is None:
             return {"status": "error", "message": f"Bus '{bus_name}' not found in any neighborhood."}
@@ -1046,10 +1121,8 @@ class OpenDSSCircuit:
             return {"status": "error", "message": f"No transformer mapping for neighborhood {neighborhood_id}."}
         secondary_bus = f"{transformer_primary_bus.lower()}_sec"
 
-        load_name = f"stor_load_{device_name_lower}"
-        gen_name = f"stor_gen_{device_name_lower}"
-
         device_details = {
+            'device_name': device_name, # User-facing name
             'bus_name': primary_bus_lower,
             'max_capacity_kwh': max_capacity_kwh,
             'current_energy_kwh': 0.0,
@@ -1063,7 +1136,8 @@ class OpenDSSCircuit:
             'opendss_load_name': load_name,
             'opendss_gen_name': gen_name,
         }
-        self.storage_devices[device_name_lower] = device_details
+        # Use the unique key for the dictionary
+        self.storage_devices[unique_key] = device_details
 
         dss.Text.Command(f"New Load.{load_name} Bus1={secondary_bus} phases=1 conn=wye kV=0.24 kW={charge_rate_kw} model=1")
         dss.Text.Command(f"New Generator.{gen_name} Bus1={secondary_bus} phases=1 kV=0.24 kW={discharge_rate_kw} PF=1.0 enabled=no")
@@ -1080,12 +1154,15 @@ class OpenDSSCircuit:
         }
 
 
-    def _disconnect_storage_device(self, device_name: str) -> dict:
+    def _disconnect_storage_device(self, bus_name: str, device_name: str) -> dict:
         """NEW: Disconnects a storage device entirely from the simulation."""
+        bus_name_lower = bus_name.lower()
         device_name_lower = device_name.lower().replace(' ', '_')
-        device = self.storage_devices.get(device_name_lower)
+        unique_key = f"{bus_name_lower}::{device_name_lower}"
+
+        device = self.storage_devices.get(unique_key)
         if not device:
-            return {"status": "error", "message": f"Storage device '{device_name}' not found."}
+            return {"status": "error", "message": f"Storage device '{device_name}' not found on bus '{bus_name}'."}
 
         bus_name = device['bus_name']
         load_name = device['opendss_load_name']
@@ -1105,31 +1182,33 @@ class OpenDSSCircuit:
         dss.Text.Command(f"disable Generator.{gen_name}")
 
         # Remove the device from the internal tracking dictionary
-        del self.storage_devices[device_name_lower]
+        del self.storage_devices[unique_key]
 
-        message = f"Storage device '{device_name}' has been disconnected."
+        message = f"Storage device '{device_name}' on bus '{bus_name}' has been disconnected."
         print(message)
         return {"status": "success", "message": message}
 
-    def toggle_storage_device(self, device_name: str, action: str = 'toggle') -> dict:
+    def toggle_storage_device(self, bus_name: str, device_name: str, action: str = 'toggle') -> dict:
         """
         Toggles a storage device between load and generator modes, or disconnects it.
         'action' can be 'toggle' or 'disconnect'.
         """
-        device_name_lower = device_name.lower().replace(' ', '_')
-
         if action.lower() == 'disconnect':
-            return self._disconnect_storage_device(device_name)
+            return self._disconnect_storage_device(bus_name, device_name)
 
         if action.lower() != 'toggle':
             return {"status": "error", "message": f"Invalid action '{action}'. Must be 'toggle' or 'disconnect'."}
+        
+        bus_name_lower = bus_name.lower()
+        device_name_lower = device_name.lower().replace(' ', '_')
+        unique_key = f"{bus_name_lower}::{device_name_lower}"
 
         # --- Existing toggle logic proceeds from here ---
-        device = self.storage_devices.get(device_name_lower)
+        device = self.storage_devices.get(unique_key)
         if not device:
-            return {"status": "error", "message": f"Storage device '{device_name}' not found."}
+            return {"status": "error", "message": f"Storage device '{device_name}' not found on bus '{bus_name}'."}
 
-        bus_name = device['bus_name']
+        # Note: bus_name is already defined from the method arguments
         build_charge_kw = device['build_charge_rate']
         build_discharge_kw = device['build_discharge_rate']
         load_name = device['opendss_load_name']
@@ -1142,10 +1221,10 @@ class OpenDSSCircuit:
 
             dss.Text.Command(f"edit Load.{load_name} enabled=no")
             if is_active:
-                self.bus_capacities[bus_name]['load_kw'] -= device['actual_charge_rate']
+                self.bus_capacities[bus_name_lower]['load_kw'] -= device['actual_charge_rate']
 
             dss.Text.Command(f"edit Generator.{gen_name} enabled=yes kW={build_discharge_kw}")
-            self.bus_capacities[bus_name]['gen_kw'] += build_discharge_kw
+            self.bus_capacities[bus_name_lower]['gen_kw'] += build_discharge_kw
 
             device['mode'] = 'generator'
             device['active'] = True
@@ -1156,10 +1235,10 @@ class OpenDSSCircuit:
         elif device['mode'] == 'generator':
             dss.Text.Command(f"edit Generator.{gen_name} enabled=no")
             if is_active:
-                self.bus_capacities[bus_name]['gen_kw'] -= device['actual_discharge_rate']
+                self.bus_capacities[bus_name_lower]['gen_kw'] -= device['actual_discharge_rate']
 
             dss.Text.Command(f"edit Load.{load_name} enabled=yes kW={build_charge_kw}")
-            self.bus_capacities[bus_name]['load_kw'] += build_charge_kw
+            self.bus_capacities[bus_name_lower]['load_kw'] += build_charge_kw
 
             device['mode'] = 'load'
             device['active'] = True
