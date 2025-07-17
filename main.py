@@ -1522,6 +1522,89 @@ class OpenDSSCircuit:
             "maximum_circuit_power_kVA": max_power_kva
         }
 
+    def stop_dfp(self, dfp_name: str, neighborhood_id: int = None) -> dict:
+        """
+        Stops a DFP execution by restoring the original load values for all affected buses
+        within a specified neighborhood or across the entire system if no neighborhood is specified.
+        Buses remain subscribed to the DFP.
+        """
+        # Find the target DFP
+        target_dfp = next((dfp for dfp in self.dfps if dfp['name'].lower() == dfp_name.lower()), None)
+        if not target_dfp:
+            return {"status": "error", "message": f"DFP with name '{dfp_name}' not found."}
+
+        dfp_index = target_dfp['index']
+        restored_count = 0
+        affected_buses = []
+
+        # Get the list of buses to process based on neighborhood
+        if neighborhood_id is not None:
+            if neighborhood_id not in self.neighborhood_data:
+                return {"status": "error", "message": f"Neighborhood with ID '{neighborhood_id}' not found."}
+            
+            # Get all buses in the neighborhood
+            buses_to_process = [b.lower() for b in self.neighborhood_data[neighborhood_id]]
+        else:
+            # Process all buses that are subscribed to this DFP
+            buses_to_process = [b for b, subs in self.bus_dfps.items() 
+                            if len(subs) >= dfp_index and subs[dfp_index - 1] == 1]
+
+        # Restore original load for each affected bus
+        for bus_name in buses_to_process:
+            if bus_name not in self.devices:
+                continue
+                
+            # Get all devices on this bus
+            for device in self.devices[bus_name]:
+                device_name = device.get('device_name')
+                load_name = f"dev_{device_name.replace(' ', '_')}"
+                
+                # Check if this load was modified by a DFP
+                if load_name in self.original_load_kws:
+                    original_kw = self.original_load_kws[load_name]
+                    
+                    # Update the load in OpenDSS
+                    dss.Circuit.SetActiveBus(bus_name)
+                    dss.Circuit.SetActiveElement(f"Load.{load_name}")
+                    
+                    if dss.CktElement.Name() == f"Load.{load_name}":  # If load exists
+                        # Get the current load values
+                        current_kw = dss.CktElement.Powers()[0] * 0.001  # Convert to kW
+                        if abs(current_kw - original_kw) > 0.001:  # Only update if there's a significant difference
+                            # Update the load in the circuit
+                            dss.run_command(f"edit Load.{load_name} kw={original_kw} kvar=0")
+                            
+                            # Update the device in our internal tracking
+                            for dev in self.devices[bus_name]:
+                                if dev.get('device_name') == device_name:
+                                    dev['kw'] = original_kw
+                                    break
+                            
+                            restored_count += 1
+                            affected_buses.append({
+                                'bus': bus_name,
+                                'device': device_name,
+                                'restored_kw': original_kw
+                            })
+        
+        # Solve the power flow to update the system state
+        dss.Solution.Solve()
+        
+        # Generate appropriate response message
+        message = f"Stopped DFP '{dfp_name}'. Restored original load for {restored_count} device(s)."
+        if neighborhood_id is not None:
+            message = f"Stopped DFP '{dfp_name}' in neighborhood {neighborhood_id}. " \
+                    f"Restored original load for {restored_count} device(s)."
+
+        return {
+            "status": "success",
+            "message": message,
+            "dfp_name": dfp_name,
+            "neighborhood_id": neighborhood_id,
+            "restored_devices_count": restored_count,
+            "affected_buses": affected_buses
+        }
+
     def get_all_dfp_details(self) -> list:
         """
         Returns a list of all DFPs with their details, including a list of subscribed buses.
