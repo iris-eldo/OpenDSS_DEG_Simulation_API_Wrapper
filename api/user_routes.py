@@ -72,7 +72,17 @@ def create_user_blueprint(circuit_ref, run_and_update_state, log_dfp_activity, r
     @user_bp.route('/toggle_storage_device', methods=['POST'])
     def toggle_storage_device_endpoint():
         data = request.get_json()
-        result = circuit_ref['instance'].toggle_storage_device(str(data['device_name']), str(data.get('action', 'toggle')))
+        # --- Start of Change ---
+        # bus_name is now required to uniquely identify the storage device
+        if 'bus_name' not in data or 'device_name' not in data:
+            return jsonify({"status": "error", "message": "Both 'bus_name' and 'device_name' are required."}), 400
+        
+        result = circuit_ref['instance'].toggle_storage_device(
+            str(data['bus_name']), 
+            str(data['device_name']), 
+            str(data.get('action', 'toggle'))
+        )
+        # --- End of Change ---
         if result.get("status") != "success": return jsonify(result), 400
         run_and_update_state()
         return jsonify(result), 200
